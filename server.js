@@ -506,9 +506,23 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 const shutdown = (signal) => {
     console.log(`\n🔻 ${signal} received, shutting down...`);
     
-    // Stop bot
-    if (botModule.stop) {
-        botModule.stop().catch(() => {});
+    // Stop bot safely
+    if (botModule && typeof botModule.stop === 'function') {
+        try {
+            // Cek jika stop() mengembalikan Promise
+            const stopResult = botModule.stop();
+            if (stopResult && typeof stopResult.then === 'function') {
+                // Jika Promise, gunakan catch
+                stopResult.catch((err) => {
+                    console.error('Error stopping bot:', err.message);
+                });
+            } else {
+                // Jika synchronous function
+                console.log('Bot stopped synchronously');
+            }
+        } catch (error) {
+            console.error('Failed to stop bot:', error.message);
+        }
     }
     
     // Close server
