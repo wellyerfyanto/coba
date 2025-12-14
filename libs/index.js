@@ -23,7 +23,7 @@ console.log(`[BOT] Mode: ${USE_CHROME ? 'Chrome (Local)' : 'HTTP (Railway)'}`);
 // ======================
 // GLOBAL STATE
 // ======================
-let isRunning = false;
+let isRunning = true;
 let totalVisitors = 0;
 let completedVisitors = 0;
 let activeTasks = [];
