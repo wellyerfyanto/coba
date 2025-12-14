@@ -408,6 +408,196 @@ function getStatus() {
         platform: IS_RAILWAY ? 'Railway' : 'Local'
     };
 }
+/**
+ * MAIN BOT WITH ADVANCED BEHAVIOR INTEGRATION
+ */
+
+console.log('[BOT] Loading SEO Traffic Bot with Advanced Behavior Engine...');
+
+const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT === 'production' || 
+                   process.env.NODE_ENV === 'production' ||
+                   process.env.DISABLE_CHROME === 'true';
+
+const USE_CHROME = !IS_RAILWAY && process.env.DISABLE_CHROME !== 'true';
+
+// Load behavior engine
+let BehaviorEngine, AdvancedChromeBot, AdvancedHTTPSimulator;
+
+try {
+    BehaviorEngine = require('./behavior-engine');
+    
+    if (USE_CHROME) {
+        try {
+            AdvancedChromeBot = require('./advanced-bot');
+        } catch {
+            console.log('[BOT] Advanced Chrome Bot not available, using basic');
+        }
+    } else {
+        AdvancedHTTPSimulator = require('./advanced-http');
+    }
+    
+    console.log('[BOT] Advanced behavior modules loaded');
+} catch (error) {
+    console.log('[BOT] Advanced behavior not available:', error.message);
+}
+
+// Extend main function with advanced behavior
+async function mainAdvanced(url, keywords = '', count = 1, method = 'direct', proxyList = [], options = {}) {
+    const advancedOptions = {
+        behaviorMode: options.behaviorMode || 'auto', // auto, random, scroller, explorer, etc.
+        maxDuration: options.maxDuration || 60000, // 60 seconds max
+        targetImpressions: options.targetImpressions || 20,
+        targetActiveView: options.targetActiveView || 15000, // 15 seconds
+        ...options
+    };
+    
+    console.log(`[ADV BOT] Starting ${count} advanced visitors`);
+    console.log(`[ADV BOT] Behavior mode: ${advancedOptions.behaviorMode}`);
+    console.log(`[ADV BOT] Target: ${advancedOptions.targetImpressions} impressions, ${advancedOptions.targetActiveView}ms active view`);
+    
+    const results = {
+        successful: 0,
+        failed: 0,
+        totalImpressions: 0,
+        totalActiveView: 0,
+        totalEngagement: 0,
+        estimatedRPM: 0,
+        visits: []
+    };
+    
+    for (let i = 0; i < count; i++) {
+        console.log(`\n[ADV VISITOR ${i + 1}/${count}] Starting...`);
+        
+        // Select proxy
+        let proxy = null;
+        if (proxyList.length > 0) {
+            proxy = proxyList[i % proxyList.length];
+        }
+        
+        // Select behavior profile
+        let profileType = advancedOptions.behaviorMode;
+        if (profileType === 'random') {
+            const profiles = ['scroller', 'explorer', 'reader', 'bouncer', 'buyer'];
+            profileType = profiles[Math.floor(Math.random() * profiles.length)];
+        }
+        
+        let visitResult;
+        
+        if (USE_CHROME && AdvancedChromeBot) {
+            // Use advanced Chrome bot
+            const chromeBot = new AdvancedChromeBot();
+            
+            if (method === 'google' && keywords) {
+                // Google search with advanced behavior
+                visitResult = await chromeBot.visitViaGoogleWithBehavior(url, keywords, proxy, profileType);
+            } else {
+                // Direct visit with advanced behavior
+                visitResult = await chromeBot.visitWithBehavior(url, proxy, profileType);
+            }
+        } else {
+            // Use advanced HTTP simulator
+            const httpBot = new AdvancedHTTPSimulator();
+            
+            if (method === 'google' && keywords) {
+                // Simulate Google search
+                visitResult = await httpBot.simulateGoogleSearchAdvanced(url, keywords, proxy, profileType);
+            } else {
+                // Direct visit with advanced simulation
+                visitResult = await httpBot.simulateAdvancedVisit(url, proxy, profileType);
+            }
+        }
+        
+        // Collect metrics
+        if (visitResult.success) {
+            results.successful++;
+            results.totalImpressions += visitResult.metrics?.impressions || 0;
+            results.totalActiveView += visitResult.metrics?.activeView || 0;
+            results.totalEngagement += visitResult.metrics?.engagementScore || 0;
+            results.estimatedRPM += visitResult.metrics?.estimatedRPM || 0;
+            
+            console.log(`✅ Visitor ${i + 1} completed:`);
+            console.log(`   Impressions: ${visitResult.metrics?.impressions || 0}`);
+            console.log(`   Active View: ${Math.round((visitResult.metrics?.activeView || 0) / 1000)}s`);
+            console.log(`   Engagement: ${visitResult.metrics?.engagementScore || 0}/100`);
+            console.log(`   Behavior: ${visitResult.behavior || 'standard'}`);
+        } else {
+            results.failed++;
+            console.log(`❌ Visitor ${i + 1} failed: ${visitResult.error}`);
+        }
+        
+        results.visits.push(visitResult);
+        
+        // Delay between visitors (shorter for HTTP mode)
+        if (i < count - 1) {
+            const delay = USE_CHROME ? 
+                randomDelay(8000, 15000) : 
+                randomDelay(3000, 8000);
+            console.log(`⏱️ Next visitor in ${Math.round(delay/1000)}s...`);
+            await new Promise(r => setTimeout(r, delay));
+        }
+    }
+    
+    // Calculate averages
+    results.avgImpressions = Math.round(results.totalImpressions / Math.max(1, results.successful));
+    results.avgActiveView = Math.round(results.totalActiveView / Math.max(1, results.successful));
+    results.avgEngagement = Math.round(results.totalEngagement / Math.max(1, results.successful));
+    results.avgRPM = results.estimatedRPM / Math.max(1, results.successful);
+    
+    // Calculate estimated revenue (RPM = Revenue Per 1000 impressions)
+    results.estimatedRevenue = (results.totalImpressions / 1000) * results.avgRPM;
+    
+    console.log('\n📊 ADVANCED SESSION SUMMARY:');
+    console.log('='.repeat(50));
+    console.log(`✅ Successful: ${results.successful}/${count}`);
+    console.log(`❌ Failed: ${results.failed}`);
+    console.log(`👁️ Total Impressions: ${results.totalImpressions}`);
+    console.log(`⏱️ Total Active View: ${Math.round(results.totalActiveView / 1000)}s`);
+    console.log(`🎯 Avg Engagement: ${results.avgEngagement}/100`);
+    console.log(`💰 Estimated RPM: $${results.avgRPM.toFixed(2)}`);
+    console.log(`💵 Estimated Revenue: $${results.estimatedRevenue.toFixed(2)}`);
+    console.log('='.repeat(50));
+    
+    return {
+        success: results.successful > 0,
+        advanced: true,
+        ...results,
+        mode: USE_CHROME ? 'Chrome (Advanced)' : 'HTTP (Advanced)'
+    };
+}
+
+// Update the exported main function
+async function main(url, keywords = '', count = 1, method = 'direct', proxyList = [], options = {}) {
+    // Check if advanced mode is requested
+    const useAdvanced = options.useAdvanced !== false && 
+                       (options.behaviorMode || options.targetImpressions || options.targetActiveView);
+    
+    if (useAdvanced) {
+        return await mainAdvanced(url, keywords, count, method, proxyList, options);
+    }
+    
+    // Original main function here...
+    // ... [existing main function code] ...
+}
+
+// Add new function for behavior configuration
+function getBehaviorProfiles() {
+    try {
+        const engine = require('./behavior-engine');
+        return engine.behaviorProfiles;
+    } catch {
+        return {};
+    }
+}
+
+// Export additional functions
+module.exports = {
+    main,
+    stop,
+    getStatus,
+    mainAdvanced, // New advanced function
+    getBehaviorProfiles, // Get available behavior profiles
+    behaviorModes: ['auto', 'random', 'scroller', 'explorer', 'reader', 'bouncer', 'buyer']
+};
 
 // ======================
 // EXPORT
