@@ -167,6 +167,79 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Failed to update bot status:', error);
         }
     }
+
+    // Add to existing renderer.js
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing code ...
+    
+    // Advanced Behavior Controls
+    const advancedToggle = document.getElementById('advancedToggle');
+    const advancedPanel = document.getElementById('advancedPanel');
+    
+    if (advancedToggle) {
+        advancedToggle.addEventListener('change', function() {
+            advancedPanel.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    // Behavior Profile Selection
+    const behaviorSelect = document.getElementById('behaviorSelect');
+    if (behaviorSelect) {
+        // Fetch available behavior profiles
+        fetch('/api/behavior-profiles')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    data.profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.type;
+                        option.textContent = `${profile.type} (${(profile.weight * 100).toFixed(0)}% weight)`;
+                        behaviorSelect.appendChild(option);
+                    });
+                }
+            });
+    }
+    
+    // Update start button to include advanced options
+    startBtn.addEventListener('click', async function() {
+        const useAdvanced = document.getElementById('advancedToggle')?.checked || false;
+        const behaviorMode = document.getElementById('behaviorSelect')?.value || 'auto';
+        const targetImpressions = parseInt(document.getElementById('targetImpressions')?.value) || 20;
+        const targetActiveView = parseInt(document.getElementById('targetActiveView')?.value) || 15000;
+        
+        const advancedOptions = useAdvanced ? {
+            behaviorMode,
+            targetImpressions,
+            targetActiveView,
+            maxDuration: 60000 // 60 seconds
+        } : {};
+        
+        // ... rest of start logic with advancedOptions ...
+    });
+});
+
+// Add to API endpoints in server.js
+app.get('/api/behavior-profiles', (req, res) => {
+    try {
+        const bot = require('./libs/index');
+        const profiles = bot.getBehaviorProfiles ? bot.getBehaviorProfiles() : {};
+        
+        const profileList = Object.values(profiles).map(p => ({
+            type: p.type,
+            weight: p.weight,
+            description: `${p.type} - Scroll: ${p.scrollDepth * 100}%, Clicks: ${p.clickProbability * 100}%, Time: ${p.timeOnSite.min/1000}-${p.timeOnSite.max/1000}s`
+        }));
+        
+        res.json({
+            success: true,
+            profiles: profileList
+        });
+    } catch (error) {
+        res.json({
+            success: false,
+            error: error.message
+        });
+    }
     
     // Event Listeners
     startBtn.addEventListener('click', async function() {
