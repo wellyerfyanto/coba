@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Traffic Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+        }
+        .card-header {
+            background-color: #0c4a6e;
+            border-bottom: 1px solid #334155;
+        }
+        .form-control, .form-select {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: #f8fafc;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #475569;
+            border-color: #3b82f6;
+            color: #f8fafc;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            border-color: #ef4444;
+        }
+        .btn-success {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .log-entry {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            background-color: #1e293b;
+            border-left: 4px solid #3b82f6;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .log-entry.success {
+            border-left-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+        .log-entry.error {
+            border-left-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+        .proxy-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold">
+                <i class="fas fa-robot text-primary"></i> SEO Traffic Bot
+            </h1>
+            <p class="lead text-muted">Professional Traffic Generation with Proxy Support</p>
+            <div class="d-flex justify-content-center gap-2">
+                <span class="badge bg-info" id="platformBadge">Loading...</span>
+                <span class="badge bg-warning" id="modeBadge">Auto Mode</span>
+                <span class="badge bg-secondary" id="statusBadge">Idle</span>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+
+        <div class="row">
+            <!-- Left Column: Bot Control -->
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cogs"></i> Bot Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Target URL</label>
+                            <input type="url" class="form-control" id="urlInput" 
+                                   placeholder="https://example.com" required>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Search Keywords (for Google method)</label>
+                                <input type="text" class="form-control" id="keywordsInput" 
+                                       placeholder="optional keywords">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Visitors</label>
+                                <input type="number" class="form-control" id="countInput" 
+                                       value="10" min="1" max="100">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Method</label>
+                                <select class="form-select" id="methodSelect">
+                                    <option value="direct">Direct Visit</option>
+                                    <option value="google">Google Search</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Proxy Usage</label>
+                                <select class="form-select" id="proxySelect">
+                                    <option value="false">No Proxies</option>
+                                    <option value="true">Use Available Proxies</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary btn-lg" id="startBtn">
+                                <i class="fas fa-play"></i> Start Bot
+                            </button>
+                            <button class="btn btn-danger btn-lg" id="stopBtn" disabled>
+                                <i class="fas fa-stop"></i> Stop Bot
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proxy Management -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-server"></i> Proxy Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Enter Proxies (one per line)</label>
+                            <textarea class="form-control" id="proxyTextarea" rows="4" 
+                                      placeholder="192.168.1.1:8080
+http://proxy.example.com:3128
+socks5://socks.example.com:1080"></textarea>
+                            <small class="text-muted">Supported formats: IP:PORT, http://IP:PORT, socks5://IP:PORT</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-info flex-fill" id="validateBtn">
+                                <i class="fas fa-check"></i> Validate
+                            </button>
+                            <button class="btn btn-success flex-fill" id="saveBtn">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+
+                        <div class="mt-3" id="proxyStats">
+                            <!-- Stats will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Logs and Status -->
+            <div class="col-lg-6">
+                <!-- Bot Status -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Bot Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="display-6 fw-bold" id="totalVisitors">0</div>
+                                <small>Total</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="display-6 fw-bold text-success" id="completedVisitors">0</div>
+                                <small>Completed</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="display-6 fw-bold text-warning" id="progressPercent">0%</div>
+                                <small>Progress</small>
+                            </div>
+                        </div>
+                        <div class="progress mt-3" style="height: 10px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-3">
+                            <div id="botInfo" class="small text-muted">Ready to start...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-terminal"></i> Live Logs</h5>
+                        <div>
+                            <span class="badge bg-dark" id="logCount">0</span>
+                            <button class="btn btn-sm btn-outline-secondary ms-2" id="clearLogsBtn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="logContainer" style="height: 300px; overflow-y: auto;">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-circle-notch fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-4 text-muted">
+            <small>SEO Traffic Bot v3.0 | Railway Optimized | Chrome/HTTP Dual Mode</small>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/renderer.js"></script>
+</body>
+</html>
