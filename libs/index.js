@@ -381,6 +381,7 @@ async function main(url, keywords = '', count = 1, method = 'direct', proxyList 
     }
 }
 
+// Ganti fungsi stop() di index.js:
 async function stop() {
     console.log('[BOT] Stopping...');
     isRunning = false;
@@ -391,12 +392,13 @@ async function stop() {
     });
     activeTasks = [];
     
-    return {
+    // Return promise untuk konsistensi
+    return Promise.resolve({
         success: true,
         message: 'Bot stopped',
         completed: completedVisitors,
         total: totalVisitors
-    };
+    });
 }
 
 function getStatus() {
