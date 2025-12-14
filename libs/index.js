@@ -392,13 +392,13 @@ async function stop() {
     });
     activeTasks = [];
     
-    // Return Promise untuk konsistensi dengan server.js
-    return Promise.resolve({
+    // Return a plain object, not a Promise
+    return {
         success: true,
         message: 'Bot stopped',
         completed: completedVisitors,
         total: totalVisitors
-    });
+    };
 }
 
 function getStatus() {
