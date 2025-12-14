@@ -166,8 +166,16 @@ app.get('/api/proxy-info', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// ... setelah semua route
 
-// ... [rest of existing endpoints remain the same] ...
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        service: 'seo-traffic-bot'
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
