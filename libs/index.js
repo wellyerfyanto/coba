@@ -55,7 +55,7 @@ function getRandomUserAgent() {
 let BehaviorEngine, AdvancedChromeBot, AdvancedHTTPSimulator;
 
 try {
-    BehaviorEngine = require('./libs/behavior-engine');
+    BehaviorEngine = require('./behavior-engine');
     console.log('[BOT] Behavior Engine loaded');
 } catch (error) {
     console.log('[BOT] Behavior Engine not available:', error.message);
@@ -64,7 +64,7 @@ try {
 
 if (USE_CHROME) {
     try {
-        AdvancedChromeBot = require('./libs/advanced-bot');
+        AdvancedChromeBot = require('./advanced-bot');
         console.log('[BOT] Advanced Chrome Bot loaded');
     } catch (error) {
         console.log('[BOT] Advanced Chrome Bot not available:', error.message);
@@ -72,7 +72,7 @@ if (USE_CHROME) {
     }
 } else {
     try {
-        AdvancedHTTPSimulator = require('./libs/advanced-http');
+        AdvancedHTTPSimulator = require('./advanced-http');
         console.log('[BOT] Advanced HTTP Simulator loaded');
     } catch (error) {
         console.log('[BOT] Advanced HTTP Simulator not available:', error.message);
