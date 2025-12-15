@@ -364,15 +364,15 @@ class TrafficSimulator {
 }
 
 // Create singleton instance
-const trafficSimulator = new TrafficSimulator();
+const TrafficSimulator = new TrafficSimulator();
 
 // Export for Railway environment
 if (process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.NODE_ENV === 'production') {
     console.log('[TRAFFIC SIM] Railway mode: Exporting HTTP simulator');
-    module.exports = trafficSimulator;
+    module.exports = TrafficSimulator;
 } else {
     // For local development, you might want to use Chrome/Selenium
     // But for this Railway version, we'll use HTTP simulator everywhere
     console.log('[TRAFFIC SIM] Local mode: Using HTTP simulator');
-    module.exports = trafficSimulator;
+    module.exports = TrafficSimulator;
 }
