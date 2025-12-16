@@ -111,7 +111,7 @@ let botModule, proxyModule, validatorModule;
 
 // PERBAIKAN KUNCI: Load bot module dari index.js di root
 try {
-    botModule = require('./index'); // PERBAIKAN: dari './index' bukan './libs/index'
+    botModule = require('./libs/index'); // PERBAIKAN: dari './index' bukan './libs/index'
     console.log('✅ Bot module loaded from ./index');
 } catch (error) {
     console.error('❌ Failed to load bot module from ./index:', error.message);
