@@ -1,0 +1,9 @@
+// libs/config.js
+module.exports = {
+    IS_RAILWAY: process.env.RAILWAY_ENVIRONMENT === 'production' || 
+               process.env.NODE_ENV === 'production' ||
+               process.env.DISABLE_CHROME === 'true',
+    USE_CHROME: !(process.env.RAILWAY_ENVIRONMENT === 'production' || 
+                 process.env.NODE_ENV === 'production' ||
+                 process.env.DISABLE_CHROME === 'true') && process.env.DISABLE_CHROME !== 'true'
+};
