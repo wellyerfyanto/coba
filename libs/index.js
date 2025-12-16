@@ -5,6 +5,35 @@
  */
 
 console.log('[BOT] Loading SEO Traffic Bot Controller with Advanced Behavior...');
+// ======================
+// DEBUG: FORCE CHECK ADVANCED MODULES
+// ======================
+console.log('[DEBUG] === MEMASTIKAN MODULE ADVANCED ===');
+console.log('[DEBUG] IS_RAILWAY:', IS_RAILWAY);
+console.log('[DEBUG] USE_CHROME:', USE_CHROME);
+console.log('[DEBUG] DISABLE_CHROME env:', process.env.DISABLE_CHROME);
+
+// Test load BehaviorEngine
+try {
+  const bePath = require.resolve('./libs/behavior-engine');
+  console.log('[DEBUG] ✅ Path behavior-engine:', bePath);
+  const BehaviorEngineTest = require('./libs/behavior-engine');
+  console.log('[DEBUG] ✅ BehaviorEngine module loaded. Type:', typeof BehaviorEngineTest);
+} catch (e) {
+  console.error('[DEBUG] ❌ BehaviorEngine LOAD ERROR:', e.message);
+}
+
+// Test load AdvancedHTTPSimulator
+try {
+  const ahPath = require.resolve('./libs/libs_advanced-http');
+  console.log('[DEBUG] ✅ Path advanced-http:', ahPath);
+  const AdvancedHTTPSimulatorTest = require('./libs/libs_advanced-http');
+  console.log('[DEBUG] ✅ AdvancedHTTPSimulator module loaded. Type:', typeof AdvancedHTTPSimulatorTest);
+  console.log('[DEBUG] ✅ Is it a class/constructor?', typeof AdvancedHTTPSimulatorTest === 'function' ? 'Yes' : 'No');
+} catch (e) {
+  console.error('[DEBUG] ❌ AdvancedHTTPSimulator LOAD ERROR:', e.message);
+}
+console.log('[DEBUG] === SELESAI CHECK ===\n');
 
 const fs = require('fs');
 const path = require('path');
