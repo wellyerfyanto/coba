@@ -68,8 +68,8 @@ try {
 
 // Load appropriate advanced simulator
 try {
-    console.log('  ↳ Loading libs_advanced-http...');
-    AdvancedHTTPSimulator = require('./libs_advanced-http');
+    console.log('  ↳ Loading advanced-http...');
+    AdvancedHTTPSimulator = require('./advanced-http');
     console.log('  ✅ Advanced HTTP Simulator loaded');
 } catch (error) {
     console.log('  ❌ Advanced HTTP Simulator not available:', error.message);
