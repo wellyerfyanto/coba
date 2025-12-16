@@ -610,7 +610,7 @@ try {
             
             if (!status.advancedAvailable) {
                 console.log('⚠️  Warning: Advanced features not available. Bot will use basic mode.');
-                console.log('ℹ️  Check if behavior-engine.js and libs_advanced-http.js exist in root folder');
+                console.log('ℹ️  Check if behavior-engine.js and advanced-http.js exist in root folder');
             }
         }
         
