@@ -125,7 +125,7 @@ let botModule, proxyModule, validatorModule;
 
 // Try to load bot module
 try {
-    botModule = require('./libs/index');
+    botModule = require('./libs/index');  // Pastikan path ini benar
     console.log('✅ Bot module loaded');
 } catch (error) {
     console.error('❌ Failed to load bot module:', error.message);
@@ -138,26 +138,7 @@ try {
         getBehaviorProfiles: () => ({})
     };
 }
-
-// Try to load proxy module
-try {
-    proxyModule = require('./libs/proxy');
-    console.log('✅ Proxy module loaded');
-} catch (error) {
-    console.error('❌ Failed to load proxy module:', error.message);
-    proxyModule = () => Promise.resolve([]);
-}
-
-// Try to load validator module
-try {
-    validatorModule = require('./libs/proxy-validator');
-    console.log('✅ Proxy validator loaded');
-} catch (error) {
-    console.error('❌ Failed to load proxy validator:', error.message);
-    validatorModule = {
-        parseMultiple: () => ({ validCount: 0, unique: [] })
-    };
-}
+// ... kode selanjutnya tetap sama
 
 // ======================
 // 6. CREATE EXPRESS APP
