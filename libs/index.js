@@ -311,7 +311,6 @@ function getStatus() {
         mode: IS_RAILWAY ? 'HTTP' : 'Chrome',
         platform: IS_RAILWAY ? 'Railway' : 'Local',
         advancedAvailable: !!(BehaviorEngine && (IS_RAILWAY ? AdvancedHTTPSimulator : null)),
-        config: config.getConfig()
     };
 }
 
