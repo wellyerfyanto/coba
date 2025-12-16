@@ -226,56 +226,95 @@ async function main(url, keywords = '', count = 1, method = 'direct', proxyList 
             let proxy = null;
             if (proxyList.length > 0) {
                 proxy = proxyList[i % proxyList.length];
-            }
+async function main(url, keywords = '', count = 1, method = 'direct', proxyList = [], options = {}) {
+    console.log('\n=== [DEBUG MAIN START] ===');
+    console.log('[DEBUG] URL:', url);
+    console.log('[DEBUG] Keywords:', keywords);
+    console.log('[DEBUG] Method:', method);
+    console.log('[DEBUG] ADVANCED_FEATURES_ENABLED:', ADVANCED_FEATURES_ENABLED);
+    console.log('[DEBUG] BehaviorEngine available:', !!BehaviorEngine);
+    console.log('[DEBUG] AdvancedHTTPSimulator available:', !!AdvancedHTTPSimulator);
+    console.log('[DEBUG] IS_RAILWAY:', IS_RAILWAY);
+    console.log('[DEBUG] USE_CHROME:', USE_CHROME);
+    
+    if (isRunning) {
+        return { success: false, error: 'Bot is already running' };
+    }
+    
+    isRunning = true;
+    totalVisitors = parseInt(count) || 1;
+    completedVisitors = 0;
+    activeTasks = [];
+    
+    // ===== FORCE ADVANCED MODE =====
+    // JANGAN gunakan kondisi if, LANGSUNG coba advanced
+    console.log('\n[FORCE] Attempting to force ADVANCED mode...');
+    
+    // Cek jika modul advanced tersedia
+    if (BehaviorEngine && AdvancedHTTPSimulator) {
+        console.log('[FORCE] ✅ Advanced modules available. Creating instance...');
+        
+        try {
+            // 1. Buat instance AdvancedHTTPSimulator
+            const advancedBot = new AdvancedHTTPSimulator();
+            console.log('[FORCE] ✅ Instance created');
             
-            let visitResult;
+            // 2. Siapkan parameter
+            const behaviorProfile = (options && options.behaviorMode) || 'auto';
+            console.log('[FORCE] Using behavior profile:', behaviorProfile);
             
+            // 3. Pilih method berdasarkan request
+            let result;
             if (method === 'google' && keywords) {
-                // Simulate Google search
-                await bot.makeRequest(`https://www.google.com/search?q=${encodeURIComponent(keywords)}`, proxy);
-                await delay(randomDelay(2000, 5000));
-                visitResult = await bot.makeRequest(url, proxy);
+                console.log(`[FORCE] Executing simulateGoogleSearchAdvanced...`);
+                // Pastikan method ini ada di class Anda
+                if (typeof advancedBot.simulateGoogleSearchAdvanced === 'function') {
+                    result = await advancedBot.simulateGoogleSearchAdvanced(url, keywords, null, behaviorProfile);
+                } else {
+                    throw new Error('simulateGoogleSearchAdvanced not found in AdvancedHTTPSimulator');
+                }
             } else {
-                visitResult = await bot.makeRequest(url, proxy);
+                console.log(`[FORCE] Executing simulateAdvancedVisit...`);
+                if (typeof advancedBot.simulateAdvancedVisit === 'function') {
+                    result = await advancedBot.simulateAdvancedVisit(url, null, behaviorProfile);
+                } else {
+                    throw new Error('simulateAdvancedVisit not found in AdvancedHTTPSimulator');
+                }
             }
             
-            results.visits.push(visitResult);
+            console.log('[FORCE] ✅ Advanced execution successful!');
+            console.log('[FORCE] Result:', result);
             
-            if (visitResult.success) {
-                results.successful++;
-            } else {
-                results.failed++;
-            }
+            isRunning = false;
+            return {
+                success: true,
+                advanced: true,
+                message: 'Advanced simulation completed successfully',
+                mode: 'HTTP (Advanced)',
+                ...result
+            };
             
-            completedVisitors++;
-            
-            if (i < totalVisitors - 1) {
-                const waitTime = randomDelay(3000, 10000);
-                console.log(`⏱️ Waiting ${Math.round(waitTime/1000)}s...`);
-                await delay(waitTime);
-            }
+        } catch (advancedError) {
+            console.error('[FORCE] ❌ Advanced mode execution failed:', advancedError.message);
+            console.error('[FORCE] Stack:', advancedError.stack);
+            // JANGAN fallback ke basic, langsung return error
+            isRunning = false;
+            return {
+                success: false,
+                error: `ADVANCED_MODE_FAILED: ${advancedError.message}`,
+                advancedAttempted: true
+            };
         }
-        
-        console.log(`[BOT] Basic mode completed: ${results.successful} successful, ${results.failed} failed`);
+    } else {
+        console.error('[FORCE] ❌ Advanced modules NOT available:');
+        console.error('  - BehaviorEngine:', BehaviorEngine ? 'OK' : 'NULL');
+        console.error('  - AdvancedHTTPSimulator:', AdvancedHTTPSimulator ? 'OK' : 'NULL');
         
         isRunning = false;
-        
-        return {
-            success: true,
-            visitors: results.successful,
-            total: totalVisitors,
-            mode: 'HTTP (Basic)',
-            message: `Completed ${results.successful}/${totalVisitors} visits`
-        };
-        
-    } catch (error) {
-        console.error('[BOT] Basic mode error:', error);
-        isRunning = false;
-        
         return {
             success: false,
-            error: error.message,
-            completed: completedVisitors
+            error: 'ADVANCED_MODULES_MISSING',
+            message: 'Cannot start advanced mode. Required modules are not loaded.'
         };
     }
 }
