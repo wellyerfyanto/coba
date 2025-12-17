@@ -1,12 +1,12 @@
 /**
  * TRAFFIC SIMULATOR - Railway Optimized
+ * FIXED VERSION: Proper ES6 class with inheritance support
  * Uses HTTP requests instead of Chrome/Selenium
  */
 
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
-const { parseMultiple } = require('./proxy-validator');
 
 class TrafficSimulator {
     constructor() {
@@ -17,6 +17,11 @@ class TrafficSimulator {
         this.activeRequests = new Set();
         this.userAgents = this.generateUserAgents();
         this.referrers = this.generateReferrers();
+        
+        // Bind methods to ensure correct 'this' context
+        this.makeRequest = this.makeRequest.bind(this);
+        this.simulateGoogleSearch = this.simulateGoogleSearch.bind(this);
+        this.delay = this.delay.bind(this);
         
         console.log('[TRAFFIC SIM] HTTP Traffic Simulator initialized for Railway');
     }
@@ -64,11 +69,11 @@ class TrafficSimulator {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
     
-    async simulateVisit(url, proxy = null) {
+    async makeRequest(url, proxy = null) {
         const startTime = Date.now();
         const visitId = Math.random().toString(36).substr(2, 9);
         
-        console.log(`[${visitId}] Starting visit to: ${url}`);
+        console.log(`[${visitId}] makeRequest to: ${url}`);
         
         try {
             const urlObj = new URL(url);
@@ -123,8 +128,6 @@ class TrafficSimulator {
                     });
                     
                     res.on('end', () => {
-                        this.completedVisitors++;
-                        
                         const result = {
                             success: statusCode >= 200 && statusCode < 400,
                             statusCode,
@@ -138,34 +141,36 @@ class TrafficSimulator {
                             proxyUsed: proxy || 'none'
                         };
                         
-                        console.log(`[${visitId}] Visit completed: ${result.success ? '✅' : '❌'} ${statusCode}`);
+                        console.log(`[${visitId}] Request completed: ${result.success ? '✅' : '❌'} ${statusCode}`);
                         resolve(result);
                     });
                 });
                 
                 req.on('error', (error) => {
                     console.log(`[${visitId}] Request error: ${error.message}`);
-                    this.completedVisitors++;
                     
-                    resolve({
+                    const result = {
                         success: false,
                         error: error.message,
                         responseTime: Date.now() - startTime,
                         proxyUsed: proxy || 'none'
-                    });
+                    };
+                    
+                    resolve(result); // Use resolve, not reject, to prevent unhandled rejections
                 });
                 
                 req.on('timeout', () => {
                     console.log(`[${visitId}] Request timeout`);
                     req.destroy();
-                    this.completedVisitors++;
                     
-                    resolve({
+                    const result = {
                         success: false,
                         error: 'timeout',
                         responseTime: Date.now() - startTime,
                         proxyUsed: proxy || 'none'
-                    });
+                    };
+                    
+                    resolve(result);
                 });
                 
                 // Send request
@@ -179,8 +184,7 @@ class TrafficSimulator {
             });
             
         } catch (error) {
-            console.log(`[${visitId}] Visit error: ${error.message}`);
-            this.completedVisitors++;
+            console.log(`[${visitId}] Request setup error: ${error.message}`);
             
             return {
                 success: false,
@@ -203,7 +207,7 @@ class TrafficSimulator {
         let results = [];
         
         for (const step of steps) {
-            const result = await this.simulateVisit(step.url, proxy);
+            const result = await this.makeRequest(step.url, proxy);
             results.push(result);
             
             if (step.delay > 0) {
@@ -221,6 +225,10 @@ class TrafficSimulator {
             steps: results.length,
             results: results
         };
+    }
+    
+    async simulateVisit(url, proxy = null) {
+        return await this.makeRequest(url, proxy);
     }
     
     async delay(ms) {
@@ -278,6 +286,8 @@ class TrafficSimulator {
                 } else {
                     results.failed++;
                 }
+                
+                this.completedVisitors = i + 1;
                 
                 // Random delay between visitors (2-10 seconds)
                 if (i < this.totalVisitors - 1) {
@@ -363,5 +373,5 @@ class TrafficSimulator {
     }
 }
 
-// Ekspor class TrafficSimulator agar bisa di-extend oleh modul lain (seperti libs_advanced-http.js)
+// ✅ CRITICAL FIX: Export sebagai CLASS, bukan instance
 module.exports = TrafficSimulator;
