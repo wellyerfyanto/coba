@@ -1,0 +1,9 @@
+# Format: host:port:username:password
+# or host:port
+# or protocol://host:port
+# or protocol://username:password@host:port
+
+proxy1.example.com:8080:user1:pass123
+proxy2.example.com:3128
+http://proxy3.example.com:8080
+socks5://user:pass@socks.example.com:1080
