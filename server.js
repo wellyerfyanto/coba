@@ -111,6 +111,7 @@ async function getBrowserLaunchOptions(config, sessionId) {
       '--disable-dev-shm-usage', // Penting untuk environment dengan memory terbatas
       '--disable-gpu',
       '--disable-crash-reporter',
+      '--user-data-dir=/tmp/chrome-user-data',
       '--disable-software-rasterizer',
       '--disable-extensions',
       '--disable-background-networking',
