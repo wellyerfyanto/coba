@@ -59,9 +59,11 @@ WORKDIR /app
 COPY package*.json ./
 COPY postinstall.js ./
 
-# 5. INSTALL NODE DEPENDENCIES
-RUN npm ci --only=production --no-audit
+# 5. INSTALL NODE DEPENDENCIES with verbose logging
+# First, check if package.json is present
+RUN ls -la package.json && cat package.json
 
+RUN npm install --only=production --no-audit --verbose 2>&1 | tail -100
 # 6. COPY APPLICATION CODE
 COPY . .
 
