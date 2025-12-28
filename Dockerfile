@@ -2,7 +2,7 @@
 FROM node:18-bullseye-slim
 
 # 1. INSTALL SYSTEM DEPENDENCIES FOR CHROMIUM
-# These libraries are crucial for Chromium to run headless in a container
+# Each line must end with a backslash (\) for continuation
 RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     libgbm1 \          # Essential for newer Chromium/Chrome
     libgcc1 \
     libgdk-pixbuf2.0-0 \
-    libglib2.0-0 \
+    glib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \          # Network Security Services - FIXES NETWORK TIMEOUTS
@@ -43,17 +43,16 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     wget \
     xdg-utils \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # 2. SET ENVIRONMENT VARIABLES FOR PUPPETEER
-# Tell Puppeteer to skip downloading Chrome and use system Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     PORT=8080
 
-# 3. CREATE APP DIRECTORY AND SET PERMISSIONS
+# 3. CREATE APP DIRECTORY
 WORKDIR /app
 
 # 4. COPY PACKAGE FILES FIRST (for better Docker layer caching)
@@ -67,15 +66,15 @@ RUN npm ci --only=production --no-audit
 COPY . .
 
 # 7. CREATE NON-ROOT USER FOR SECURITY
-RUN groupadd -r botuser && useradd -r -g botuser -G audio,video botuser \
-    && chown -R botuser:botuser /app
+RUN groupadd -r botuser && useradd -r -g botuser -G audio,video botuser && \
+    chown -R botuser:botuser /app
 
 USER botuser
 
-# 8. EXPOSE PORT (matches Railway's default)
+# 8. EXPOSE PORT
 EXPOSE 8080
 
-# 9. HEALTH CHECK (optional but good for Railway)
+# 9. HEALTH CHECK
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
