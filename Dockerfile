@@ -17,13 +17,13 @@ RUN apt-get update && apt-get install -y \
     libdbus-1-3 \
     libexpat1 \
     libfontconfig1 \
-    libgbm1 \          # Essential for newer Chromium/Chrome
+    libgbm1 \          
     libgcc1 \
     libgdk-pixbuf2.0-0 \
     glib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
-    libnss3 \          # Network Security Services - FIXES NETWORK TIMEOUTS
+    libnss3 \          
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libstdc++6 \
