@@ -8,8 +8,6 @@ const fileUpload = require('express-fileupload');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const fsSync = require('fs');
-
-// FIX: Gunakan puppeteer regular (bukan puppeteer-core)
 const puppeteer = require('puppeteer');
 
 // Import modul utilitas
