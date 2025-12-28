@@ -51,7 +51,6 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     PORT=8080
-    XDG_CONFIG_HOME=/tmp/.chromium
 
 # 3. CREATE APP DIRECTORY
 WORKDIR /app
