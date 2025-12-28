@@ -110,6 +110,7 @@ async function getBrowserLaunchOptions(config, sessionId) {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage', // Penting untuk environment dengan memory terbatas
       '--disable-gpu',
+      '--disable-crash-reporter',
       '--disable-software-rasterizer',
       '--disable-extensions',
       '--disable-background-networking',
