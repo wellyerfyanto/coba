@@ -1,9 +1,10 @@
-# Format: host:port:username:password
-# or host:port
-# or protocol://host:port
-# or protocol://username:password@host:port
-
-proxy1.example.com:8080:user1:pass123
-proxy2.example.com:3128
-http://proxy3.example.com:8080
-socks5://user:pass@socks.example.com:1080
+142.111.48.253:7030:tjvkqvhu:i19g24kyvwo2
+31.59.20.176:6754:tjvkqvhu:i19g24kyvwo2
+23.95.150.145:6114:tjvkqvhu:i19g24kyvwo2
+198.23.239.134:6540:tjvkqvhu:i19g24kyvwo2
+107.172.163.27:6543:tjvkqvhu:i19g24kyvwo2
+198.105.121.200:6462:tjvkqvhu:i19g24kyvwo2
+64.137.96.74:6641:tjvkqvhu:i19g24kyvwo2
+84.247.60.125:6095:tjvkqvhu:i19g24kyvwo2
+216.10.27.159:6837:tjvkqvhu:i19g24kyvwo2
+142.111.67.146:5611:tjvkqvhu:i19g24kyvwo2
