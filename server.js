@@ -412,14 +412,373 @@ async function runBotSession(config, sessionIndex, mainSessionId, socketId = nul
 
 // Fungsi untuk traffic YouTube (sama seperti sebelumnya)
 async function handleYouTubeTraffic(page, config, sessionId, socketId) {
-  // ... (kode tetap sama seperti sebelumnya) ...
-}
+  console.log(`[${sessionId}] Starting YouTube traffic...`);
+  
+  emitStatus(socketId, {
+    sessionId,
+    status: 'progress',
+    message: 'Membuka YouTube...',
+    progress: 30
+  });
 
+  try {
+    // OPTION A: Pergi ke URL langsung jika disediakan
+    if (config.ytDirectUrl) {
+      console.log(`[${sessionId}] Navigating to direct URL: ${config.ytDirectUrl}`);
+      await page.goto(config.ytDirectUrl, { 
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+    } 
+    // OPTION B: Atau cari berdasarkan keyword
+    else if (config.ytKeyword) {
+      await page.goto('https://www.youtube.com', { 
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+      console.log(`[${sessionId}] Searching for: ${config.ytKeyword}`);
+      
+      // Isi search box dan tekan Enter
+      await page.waitForSelector('input[name="search_query"]', { timeout: 10000 });
+      await page.type('input[name="search_query"]', config.ytKeyword);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(3000);
+
+      emitStatus(socketId, {
+        sessionId,
+        status: 'progress',
+        message: `Mencari "${config.ytKeyword}"...`,
+        progress: 40
+      });
+      
+      // Klik video pertama yang ditemukan
+      const videoSelector = 'ytd-video-renderer #thumbnail';
+      await page.waitForSelector(videoSelector, { timeout: 10000 });
+      const videos = await page.$$(videoSelector);
+      if (videos.length > 0) {
+        console.log(`[${sessionId}] Clicking first video from search`);
+        await videos[0].click();
+        await page.waitForTimeout(5000);
+      } else {
+        throw new Error('Tidak ada video ditemukan di hasil pencarian');
+      }
+    } else {
+      throw new Error('Harap berikan ytKeyword ATAU ytDirectUrl');
+    }
+
+    // TUNGGU VIDEO DIMUAT
+    emitStatus(socketId, {
+      sessionId,
+      status: 'progress',
+      message: 'Video sedang dimuat...',
+      progress: 50
+    });
+    
+    // Tunggu elemen pemutar video atau halaman stabil
+    await page.waitForTimeout(5000);
+
+    // SIMULASI MENONTON DENGAN SCROLL
+    const watchDuration = (config.watchDuration || 1) * 60000; // konversi ke ms
+    const segmentDuration = 10000; // cek setiap 10 detik
+    const segments = Math.ceil(watchDuration / segmentDuration);
+    
+    console.log(`[${sessionId}] Simulating watch for ${watchDuration/1000}s in ${segments} segments`);
+    
+    for (let i = 0; i < segments; i++) {
+      // Scroll acak seperti manusia
+      await humanLikeScroll(page, sessionId, 100, 400);
+      
+      // Kadang tekan tombol mute/unmute atau space untuk pause/play (opsional, mirip manusia)
+      if (Math.random() > 0.7) {
+        await page.keyboard.press(' ');
+        await page.waitForTimeout(1000);
+        await page.keyboard.press(' ');
+      }
+      
+      await page.waitForTimeout(segmentDuration);
+      
+      emitStatus(socketId, {
+        sessionId,
+        status: 'progress',
+        message: `Menonton... (${i+1}/${segments})`,
+        progress: 50 + Math.floor((i / segments) * 30)
+      });
+    }
+
+    // INTERAKSI: LIKE
+    if (config.ytLike) {
+      try {
+        // Coba temukan tombol like dengan beberapa selector berbeda
+        const likeButton = await page.$('button[aria-label^="Like"]') || 
+                           await page.$('button[aria-label*="like" i]') ||
+                           await page.$('ytd-toggle-button-renderer yt-icon-button');
+        
+        if (likeButton) {
+          await likeButton.click();
+          console.log(`[${sessionId}] Liked the video`);
+          await page.waitForTimeout(2000);
+          emitStatus(socketId, {
+            sessionId,
+            status: 'interaction',
+            message: 'Video telah di-like'
+          });
+        }
+      } catch (e) {
+        console.log(`[${sessionId}] Could not like video:`, e.message);
+      }
+    }
+
+    // INTERAKSI: COMMENT (jika diaktifkan DAN config.commentText ada)
+    if (config.ytComment && config.commentText) {
+      try {
+        // Scroll ke area komentar
+        await page.evaluate(() => {
+          window.scrollBy(0, 800);
+        });
+        await page.waitForTimeout(2000);
+        
+        // Coba fokuskan comment box
+        const commentBoxSelector = '#placeholder-area, #contenteditable-root, #container #contenteditable';
+        const commentBox = await page.$(commentBoxSelector);
+        if (commentBox) {
+          await commentBox.click();
+          await page.waitForTimeout(1000);
+          
+          // Ketik komentar karakter per karakter (lebih manusiawi)
+          await page.type(commentBoxSelector, config.commentText, { delay: 50 });
+          await page.waitForTimeout(2000);
+          
+          // Cari tombol submit
+          const submitButton = await page.$('#submit-button, yt-button-renderer[aria-label^="Comment"]');
+          if (submitButton) {
+            await submitButton.click();
+            console.log(`[${sessionId}] Comment posted`);
+            emitStatus(socketId, {
+              sessionId,
+              status: 'interaction',
+              message: 'Komentar telah diposting'
+            });
+          }
+        }
+      } catch (e) {
+        console.log(`[${sessionId}] Could not post comment:`, e.message);
+      }
+    }
+
+    // INTERAKSI: SUBSCRIBE
+    if (config.ytSubscribe) {
+      try {
+        const subscribeButton = await page.$('#subscribe-button, ytd-subscribe-button-renderer, tp-yt-paper-button[aria-label^="Subscribe"]');
+        if (subscribeButton) {
+          const buttonText = await page.evaluate(btn => btn.textContent, subscribeButton);
+          // Hanya klik jika belum subscribe
+          if (!buttonText.includes('Subscribed')) {
+            await subscribeButton.click();
+            console.log(`[${sessionId}] Subscribed to channel`);
+            await page.waitForTimeout(2000);
+            emitStatus(socketId, {
+              sessionId,
+              status: 'interaction',
+              message: 'Berlangganan channel'
+            });
+          }
+        }
+      } catch (e) {
+        console.log(`[${sessionId}] Could not subscribe:`, e.message);
+      }
+    }
+
+    emitStatus(socketId, {
+      sessionId,
+      status: 'progress',
+      message: 'Sesi YouTube selesai',
+      progress: 95
+    });
+
+    return { action: 'youtube_traffic', success: true, watched: true };
+
+  } catch (error) {
+    console.error(`[${sessionId}] Error in YouTube traffic:`, error);
+    // Jangan lempar error agar session lain tetap berjalan
+    emitStatus(socketId, {
+      sessionId,
+      status: 'error',
+      message: `YouTube Error: ${error.message}`
+    });
+    return { action: 'youtube_traffic', success: false, error: error.message };
+  }
+}
 // Fungsi untuk traffic website (sama seperti sebelumnya)
 async function handleWebsiteTraffic(page, config, sessionId, socketId) {
-  // ... (kode tetap sama seperti sebelumnya) ...
-}
+  console.log(`[${sessionId}] Starting website traffic...`);
+  
+  if (!config.webUrl) {
+    throw new Error('webUrl diperlukan untuk traffic website');
+  }
 
+  const targetUrl = config.webUrl.startsWith('http') ? config.webUrl : `https://${config.webUrl}`;
+  
+  emitStatus(socketId, {
+    sessionId,
+    status: 'progress',
+    message: `Membuka ${targetUrl}...`,
+    progress: 30
+  });
+
+  try {
+    // BUKA WEBSITE UTAMA
+    await page.goto(targetUrl, { 
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    });
+
+    emitStatus(socketId, {
+      sessionId,
+      status: 'progress',
+      message: 'Website berhasil dimuat',
+      progress: 40
+    });
+
+    // TENTUKAN POLA SCROLL BERDASARKAN KONFIG
+    let scrollPattern = {
+      count: 5,
+      minDelay: 1000,
+      maxDelay: 3000,
+      minScroll: 300,
+      maxScroll: 800
+    };
+    
+    if (config.scrollPattern === 'skimmer') {
+      scrollPattern = { count: 3, minDelay: 500, maxDelay: 1500, minScroll: 500, maxScroll: 1200 };
+    } else if (config.scrollPattern === 'reader') {
+      scrollPattern = { count: 8, minDelay: 2000, maxDelay: 5000, minScroll: 200, maxScroll: 500 };
+    } else if (config.scrollPattern === 'researcher') {
+      scrollPattern = { count: 10, minDelay: 1500, maxDelay: 4000, minScroll: 100, maxScroll: 400 };
+    }
+
+    // EKSEKUSI SCROLL
+    for (let i = 0; i < scrollPattern.count; i++) {
+      const scrollAmount = Math.floor(Math.random() * (scrollPattern.maxScroll - scrollPattern.minScroll + 1)) + scrollPattern.minScroll;
+      const delay = Math.random() * (scrollPattern.maxDelay - scrollPattern.minDelay) + scrollPattern.minDelay;
+      
+      await page.evaluate((amount) => {
+        window.scrollBy({ top: amount, behavior: 'smooth' });
+      }, scrollAmount);
+      
+      await page.waitForTimeout(delay);
+      
+      console.log(`[${sessionId}] Scroll ${i+1}/${scrollPattern.count}: ${scrollAmount}px`);
+      
+      emitStatus(socketId, {
+        sessionId,
+        status: 'progress',
+        message: `Menjelajahi halaman... (${i+1}/${scrollPattern.count})`,
+        progress: 40 + Math.floor((i / scrollPattern.count) * 30)
+      });
+    }
+    
+    // KLIK LINK INTERNAL (jika diaktifkan)
+    if (config.clickLinks) {
+      try {
+        // Cari semua link yang valid
+        const links = await page.$$eval('a', anchors => 
+          anchors
+            .filter(a => {
+              const href = a.href;
+              const text = a.textContent.trim();
+              return href && 
+                     href.length > 0 &&
+                     !href.includes('#') &&
+                     !href.startsWith('javascript:') &&
+                     !href.startsWith('mailto:') &&
+                     text.length > 1 &&
+                     !a.hasAttribute('download');
+            })
+            .map(a => ({ href: a.href, text: a.textContent.trim().substring(0, 50) }))
+            .slice(0, 8) // Ambil maksimal 8 link
+        );
+
+        if (links.length > 0) {
+          const randomLink = links[Math.floor(Math.random() * links.length)];
+          console.log(`[${sessionId}] Clicking internal link: ${randomLink.text} -> ${randomLink.href}`);
+          
+          emitStatus(socketId, {
+            sessionId,
+            status: 'navigation',
+            message: `Mengunjungi: ${randomLink.text}...`
+          });
+
+          // Pergi ke link internal
+          await page.goto(randomLink.href, { 
+            waitUntil: 'networkidle2', 
+            timeout: 15000 
+          });
+          
+          // Scroll singkat di halaman baru
+          await page.waitForTimeout(2000);
+          for (let i = 0; i < 2; i++) {
+            await page.evaluate(() => {
+              window.scrollBy({ top: 400, behavior: 'smooth' });
+            });
+            await page.waitForTimeout(1500);
+          }
+          
+          emitStatus(socketId, {
+            sessionId,
+            status: 'progress',
+            message: 'Mengunjungi halaman internal',
+            progress: 75
+          });
+        }
+      } catch (e) {
+        console.log(`[${sessionId}] Could not navigate to internal link:`, e.message);
+      }
+    }
+
+    // TINGGAL DI HALAMAN SESUAI DURASI
+    const visitTime = Math.min((config.visitDuration || 1) * 60000, 300000); // Max 5 menit
+    if (visitTime > 0) {
+      const staySegments = Math.ceil(visitTime / 10000); // Segmen 10 detik
+      console.log(`[${sessionId}] Staying for ${visitTime/1000}s (${staySegments} segments)`);
+      
+      for (let i = 0; i < staySegments; i++) {
+        await page.waitForTimeout(10000);
+        
+        // Aktivitas kecil periodik
+        if (i % 3 === 0) {
+          await page.evaluate(() => {
+            window.scrollBy({ top: Math.random() > 0.5 ? 100 : -50, behavior: 'smooth' });
+          });
+        }
+        
+        emitStatus(socketId, {
+          sessionId,
+          status: 'progress',
+          message: `Mengamati konten... (${i+1}/${staySegments})`,
+          progress: 75 + Math.floor((i / staySegments) * 20)
+        });
+      }
+    }
+
+    emitStatus(socketId, {
+      sessionId,
+      status: 'progress',
+      message: 'Traffic website selesai',
+      progress: 100
+    });
+
+    return { action: 'website_traffic', success: true, url: targetUrl };
+
+  } catch (error) {
+    console.error(`[${sessionId}] Error in website traffic:`, error);
+    emitStatus(socketId, {
+      sessionId,
+      status: 'error',
+      message: `Website Error: ${error.message}`
+    });
+    return { action: 'website_traffic', success: false, error: error.message };
+  }
+}
 // Fungsi utama untuk menjalankan semua sesi bot
 async function runTrafficBot(config, socketId = null) {
   const mainSessionId = config.sessionId || uuidv4();
