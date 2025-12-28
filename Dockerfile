@@ -9,16 +9,21 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     font-noto-emoji \
+    dumb-init \
     && rm -rf /var/cache/apk/*
 
 # Set environment variables for Puppeteer
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --only=production
+COPY postinstall.js ./
+
+# Install dependencies
+RUN npm ci --only=production
 
 COPY . .
 
@@ -29,6 +34,8 @@ RUN addgroup -g 1001 -S nodejs \
 
 USER botuser
 
-EXPOSE 3000
+EXPOSE 8080
 
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]
