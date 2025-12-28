@@ -128,7 +128,8 @@ async function getBrowserLaunchOptions(config, sessionId) {
     executablePath: executablePath,
     headless: 'new', // Headless mode baru
     ignoreHTTPSErrors: true,
-    timeout: 120000
+    timeout: 120000,
+    protocolTimeout: 120000
   };
 
   // Tambahkan user data dir jika differentProfiles diaktifkan
