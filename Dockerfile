@@ -1,8 +1,6 @@
-# Dockerfile - Optimized for Puppeteer on Railway
 FROM node:18-bullseye-slim
 
 # 1. INSTALL SYSTEM DEPENDENCIES FOR CHROMIUM
-# Each line must end with a backslash (\) for continuation
 RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
@@ -17,13 +15,13 @@ RUN apt-get update && apt-get install -y \
     libdbus-1-3 \
     libexpat1 \
     libfontconfig1 \
-    libgbm1 \          
+    libgbm1 \
     libgcc1 \
     libgdk-pixbuf2.0-0 \
-    glib2.0-0 \
+    libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
-    libnss3 \          
+    libnss3 \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libstdc++6 \
@@ -52,31 +50,36 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     NODE_ENV=production \
     PORT=8080
 
-# 3. CREATE APP DIRECTORY
+# 3. FIX FOR CRASHPAD ERROR: Set writable directories for Chrome
+ENV XDG_RUNTIME_DIR=/tmp/.chromium \
+    XDG_CONFIG_HOME=/tmp/.chromium \
+    HOME=/tmp/.chromium
+
 WORKDIR /app
 
-# 4. COPY PACKAGE FILES FIRST (for better Docker layer caching)
+# 4. COPY PACKAGE FILES AND INSTALL DEPENDENCIES
 COPY package*.json ./
-COPY postinstall.js ./
+RUN npm install --only=production --no-audit
 
-# 5. INSTALL NODE DEPENDENCIES with verbose logging
-# First, check if package.json is present
-RUN ls -la package.json && cat package.json
-
-RUN npm install --only=production --no-audit --verbose 2>&1 | tail -100
-# 6. COPY APPLICATION CODE
+# 5. COPY APPLICATION CODE
 COPY . .
+
+# 6. CREATE DIRECTORIES FOR CHROME WITH PROPER PERMISSIONS
+# This is CRITICAL for fixing the crashpad error
+RUN mkdir -p /tmp/chrome-user-data /tmp/.chromium && \
+    chmod -R 777 /tmp && \
+    chown -R node:node /tmp
 
 # 7. CREATE NON-ROOT USER FOR SECURITY
 RUN groupadd -r botuser && useradd -r -g botuser -G audio,video botuser && \
-    chown -R botuser:botuser /app
+    chown -R botuser:botuser /app /tmp/chrome-user-data /tmp/.chromium
 
 USER botuser
 
 # 8. EXPOSE PORT
 EXPOSE 8080
 
-# 9. HEALTH CHECK
+# 9. HEALTH CHECK (optional but recommended)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
