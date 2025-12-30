@@ -1,6 +1,6 @@
 FROM node:18-bullseye-slim
 
-# 1. INSTALL SYSTEM DEPENDENCIES (Termasuk Chromium untuk Puppeteer)
+# 1. Install Chromium dan dependensi sistem yang diperlukan Puppeteer
 RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
@@ -35,48 +35,29 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    lsb-release \
     wget \
-    xdg-utils \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# 2. SET ENVIRONMENT VARIABLES FOR PUPPETEER
+# 2. Set environment variabel agar Puppeteer menggunakan Chromium sistem
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     PORT=8080
 
-# 3. FIX PERMISSIONS AND CREATE NECESSARY DIRS
-RUN mkdir -p /tmp/chrome-user-data && chmod 777 /tmp/chrome-user-data
-
+# 3. Setup direktori kerja dan non-root user untuk keamanan
 WORKDIR /app
-
-# 4. COPY PACKAGE FILES
-COPY package*.json ./
-
-# 5. INSTALL DEPENDENCIES (FIXED COMMAND)
-# Gunakan 'npm install' jika 'package-lock.json' tidak ada/tidak valid
-RUN if [ -f package-lock.json ]; then \
-      npm ci --omit=dev --no-audit --no-fund; \
-    else \
-      npm install --omit=dev --no-audit --no-fund; \
-      npm cache clean --force; \
-    fi
-
-# 6. COPY APPLICATION CODE
-COPY . .
-
-# 7. CREATE NON-ROOT USER (Security best practice)
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+RUN groupadd -r appuser && useradd -r -g appuser -s /bin/bash appuser
+RUN chown -R appuser:appuser /app
 USER appuser
 
-# 8. EXPOSE PORT
+# 4. Salin file dependensi dan install
+COPY --chown=appuser:appuser package*.json ./
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
+
+# 5. Salin sisa kode aplikasi
+COPY --chown=appuser:appuser . .
+
+# 6. Expose port dan jalankan aplikasi
 EXPOSE 8080
-
-# 9. HEALTH CHECK
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-# 10. START THE APPLICATION
 CMD ["node", "server.js"]
