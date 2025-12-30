@@ -37,10 +37,10 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files DAN postinstall.js terlebih dahulu
+COPY package*.json postinstall.js ./
 
-# Install dependencies - GANTI npm ci dengan npm install
+# Install dependencies
 RUN npm install --omit=dev --no-audit --no-fund
 
 # Copy app source
