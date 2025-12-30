@@ -8,6 +8,11 @@ const fileUpload = require('express-fileupload');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const fsSync = require('fs');
+// Log memory usage tiap 10 detik
+setInterval(() => {
+    const mem = process.memoryUsage();
+    console.log(`[MEM] RSS: ${Math.round(mem.rss/1024/1024)}MB | Heap: ${Math.round(mem.heapUsed/1024/1024)}MB`);
+}, 10000);
 
 // Gunakan puppeteer dengan konfigurasi untuk Railway
 const puppeteer = require('puppeteer');
