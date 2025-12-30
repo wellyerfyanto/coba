@@ -60,13 +60,20 @@ app.get('/', (req, res) => {
 
 // Health check endpoint untuk Railway
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  // Log setiap panggilan health check (untuk debug)
+  console.log(`[HEALTH] Checked at ${new Date().toISOString()}, Uptime: ${process.uptime()}s`);
+  
+  // Status selalu OK asalkan server merespons
+  // Railway hanya perlu melihat response 200, tidak peduli isinya
+  res.status(200).json({ 
+    status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'traffic-bot-v3',
-    version: '3.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    railway: process.env.RAILWAY_ENVIRONMENT === 'true' ? 'true' : 'false'
+    uptime: process.uptime(),
+    memory: {
+      rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
+      heap: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
+    }
   });
 });
 
