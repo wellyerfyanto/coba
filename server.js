@@ -1503,100 +1503,98 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// ... kode sebelumnya ...
+
+// Start server - TANPA setTimeout
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
-// Delay startup untuk memastikan semua module loaded
-const STARTUP_DELAY = 5000; // 5 detik
 
-console.log(`⏳ [STARTUP] Waiting ${STARTUP_DELAY}ms before starting server...`);
-
-setTimeout(() => {
-  const PORT = process.env.PORT || 8080;
-  const serverInstance = server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ [STARTUP] Server listening on port ${PORT}`);
-    console.log(`🕒 [STARTUP] Startup completed at ${new Date().toISOString()}`);
-    
-    // Log periodic heartbeat
-    setInterval(() => {
-      console.log(`❤️  [HEARTBEAT] Uptime: ${process.uptime().toFixed(1)}s`);
-    }, 30000); // Setiap 30 detik
-    
-    // Tampilkan pesan startup
-    console.log(`
-    🚀 TRAFFIC BOT v3.0 SERVER STARTED
-    ===================================
-    📡 Port: ${PORT}
-    🏠 Host: ${HOST}
-    📦 Environment: ${process.env.NODE_ENV || 'development'}
-    🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
-    🐢 Puppeteer: ${puppeteer.executablePath()}
-    📁 Sessions: ${sessionsDir}
-    ✅ Health: http://localhost:${PORT}/health
-    ✅ Status: http://localhost:${PORT}/api/status
-    ===================================
-    `);
-    
-    // Log environment info
-    if (process.env.RAILWAY_ENVIRONMENT === 'true') {
-      console.log('✅ Running on Railway platform');
-      console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
-    }
-  });
+// Listen tanpa delay
+const serverInstance = server.listen(PORT, HOST, () => {
+  console.log(`✅ [STARTUP] Server listening on port ${PORT}`);
+  console.log(`🕒 [STARTUP] Startup completed at ${new Date().toISOString()}`);
   
-  // Handle server errors
-  serverInstance.on('error', (error) => {
-    console.error('❌ [SERVER ERROR]', error.message);
-    if (error.code === 'EADDRINUSE') {
-      console.error('⚠️ Port', PORT, 'is already in use');
-    }
-  });
+  console.log(`
+  🚀 TRAFFIC BOT v3.0 SERVER STARTED
+  ===================================
+  📡 Port: ${PORT}
+  🏠 Host: ${HOST}
+  📦 Environment: ${process.env.NODE_ENV || 'development'}
+  🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
+  🐢 Puppeteer: ${puppeteer.executablePath()}
+  📁 Sessions: ${sessionsDir}
+  ✅ Health: http://localhost:${PORT}/health
+  ✅ Status: http://localhost:${PORT}/api/status
+  ===================================
+  `);
   
-}, STARTUP_DELAY);
+  // Log environment info
+  if (process.env.RAILWAY_ENVIRONMENT === 'true') {
+    console.log('✅ Running on Railway platform');
+    console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
+  }
+  
+  // Log periodic heartbeat
+  setInterval(() => {
+    console.log(`❤️  [HEARTBEAT] Uptime: ${process.uptime().toFixed(1)}s | Clients: ${io.engine.clientsCount}`);
+  }, 30000);
+});
 
-// HAPUS BAGIAN INI - server.listen kedua sudah tidak diperlukan
-// server.listen(PORT, HOST, () => {
-//   console.log(`
-//   🚀 TRAFFIC BOT v3.0 SERVER STARTED
-//   ===================================
-//   📡 Port: ${PORT}
-//   🏠 Host: ${HOST}
-//   📦 Environment: ${process.env.NODE_ENV || 'development'}
-//   🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
-//   🐢 Puppeteer: ${puppeteer.executablePath()}
-//   📁 Sessions: ${sessionsDir}
-//   ✅ Health: http://localhost:${PORT}/health
-//   ✅ Status: http://localhost:${PORT}/api/status
-//   ===================================
-//   `);
-//   
-//   // Log environment info
-//   if (process.env.RAILWAY_ENVIRONMENT === 'true') {
-//     console.log('✅ Running on Railway platform');
-//     console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
-//   }
-// });
+// Handle server errors
+serverInstance.on('error', (error) => {
+  console.error('❌ [SERVER ERROR]', error.message);
+  if (error.code === 'EADDRINUSE') {
+    console.error('⚠️ Port', PORT, 'is already in use');
+    process.exit(1);
+  }
+});
 
-// Graceful shutdown
+// Graceful shutdown handlers
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received. Shutting down gracefully...');
   
   // Close all active sessions
   activeSessions.clear();
   
+  // Close Socket.IO connections
+  io.close();
+  
   // Close server
-  server.close(() => {
+  serverInstance.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
+  
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('⚠️ Forcing shutdown after timeout');
+    process.exit(1);
+  }, 10000);
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received. Shutting down...');
-  server.close(() => {
+  
+  io.close();
+  
+  serverInstance.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
+  
+  setTimeout(() => {
+    console.error('⚠️ Forcing shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+});
+
+// Keep process alive - IMPORTANT for Railway/Container
+process.on('beforeExit', (code) => {
+  console.log(`⚠️ Process about to exit with code: ${code}`);
+  // Prevent exit
+  setTimeout(() => {
+    console.log('🔄 Keeping process alive...');
+  }, 1000);
 });
 
 // Export for testing
