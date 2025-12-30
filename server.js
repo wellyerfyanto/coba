@@ -1,3 +1,13 @@
+// Tangkap semua error yang tidak tertangkap
+process.on('uncaughtException', (err) => {
+  console.error('❌ [UNCAUGHT EXCEPTION] FATAL:', err.message, err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ [UNHANDLED REJECTION] FATAL:', reason);
+  process.exit(1);
+});
 require('dotenv').config();
 const express = require('express');
 const socketIO = require('socket.io');
