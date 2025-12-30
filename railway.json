@@ -4,8 +4,8 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node platform-test.js",
-    "healthcheckPath": null,
-    "healthcheckTimeout": 10
+    "startCommand": "node server.js",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 60
   }
 }
