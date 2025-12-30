@@ -1,6 +1,6 @@
 FROM node:18-bullseye-slim
 
-# 1. Install Chromium dan dependensi sistem yang diperlukan Puppeteer
+# 1. Install Chromium dan dependensi sistem
 RUN apt-get update && apt-get install -y \
     chromium \
     ca-certificates \
@@ -39,25 +39,22 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# 2. Set environment variabel agar Puppeteer menggunakan Chromium sistem
+# 2. Set environment variabel untuk Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     PORT=8080
 
-# 3. Setup direktori kerja dan non-root user untuk keamanan
 WORKDIR /app
-RUN groupadd -r appuser && useradd -r -g appuser -s /bin/bash appuser
-RUN chown -R appuser:appuser /app
-USER appuser
 
-# 4. Salin file dependensi dan install
-COPY --chown=appuser:appuser package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
+# 3. Salin HANYA package.json terlebih dahulu
+COPY package.json ./
+
+# 4. Install dependencies menggunakan npm install (bukan ci)
+RUN npm install --omit=dev --no-audit --no-fund
 
 # 5. Salin sisa kode aplikasi
-COPY --chown=appuser:appuser . .
+COPY . .
 
-# 6. Expose port dan jalankan aplikasi
 EXPOSE 8080
 CMD ["node", "server.js"]
