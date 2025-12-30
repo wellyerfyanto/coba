@@ -1521,6 +1521,27 @@ setTimeout(() => {
     setInterval(() => {
       console.log(`❤️  [HEARTBEAT] Uptime: ${process.uptime().toFixed(1)}s`);
     }, 30000); // Setiap 30 detik
+    
+    // Tampilkan pesan startup
+    console.log(`
+    🚀 TRAFFIC BOT v3.0 SERVER STARTED
+    ===================================
+    📡 Port: ${PORT}
+    🏠 Host: ${HOST}
+    📦 Environment: ${process.env.NODE_ENV || 'development'}
+    🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
+    🐢 Puppeteer: ${puppeteer.executablePath()}
+    📁 Sessions: ${sessionsDir}
+    ✅ Health: http://localhost:${PORT}/health
+    ✅ Status: http://localhost:${PORT}/api/status
+    ===================================
+    `);
+    
+    // Log environment info
+    if (process.env.RAILWAY_ENVIRONMENT === 'true') {
+      console.log('✅ Running on Railway platform');
+      console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
+    }
   });
   
   // Handle server errors
@@ -1533,27 +1554,28 @@ setTimeout(() => {
   
 }, STARTUP_DELAY);
 
-server.listen(PORT, HOST, () => {
-  console.log(`
-  🚀 TRAFFIC BOT v3.0 SERVER STARTED
-  ===================================
-  📡 Port: ${PORT}
-  🏠 Host: ${HOST}
-  📦 Environment: ${process.env.NODE_ENV || 'development'}
-  🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
-  🐢 Puppeteer: ${puppeteer.executablePath()}
-  📁 Sessions: ${sessionsDir}
-  ✅ Health: http://localhost:${PORT}/health
-  ✅ Status: http://localhost:${PORT}/api/status
-  ===================================
-  `);
-  
-  // Log environment info
-  if (process.env.RAILWAY_ENVIRONMENT === 'true') {
-    console.log('✅ Running on Railway platform');
-    console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
-  }
-});
+// HAPUS BAGIAN INI - server.listen kedua sudah tidak diperlukan
+// server.listen(PORT, HOST, () => {
+//   console.log(`
+//   🚀 TRAFFIC BOT v3.0 SERVER STARTED
+//   ===================================
+//   📡 Port: ${PORT}
+//   🏠 Host: ${HOST}
+//   📦 Environment: ${process.env.NODE_ENV || 'development'}
+//   🌐 Railway: ${process.env.RAILWAY_ENVIRONMENT === 'true' ? '✅ Yes' : '❌ No'}
+//   🐢 Puppeteer: ${puppeteer.executablePath()}
+//   📁 Sessions: ${sessionsDir}
+//   ✅ Health: http://localhost:${PORT}/health
+//   ✅ Status: http://localhost:${PORT}/api/status
+//   ===================================
+//   `);
+//   
+//   // Log environment info
+//   if (process.env.RAILWAY_ENVIRONMENT === 'true') {
+//     console.log('✅ Running on Railway platform');
+//     console.log(`✅ Chromium path: ${process.env.CHROMIUM_PATH || '/usr/bin/chromium'}`);
+//   }
+// });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
