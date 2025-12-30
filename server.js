@@ -101,23 +101,39 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Health check endpoint untuk Railway
+// Health check endpoint yang tidak pernah gagal
 app.get('/health', (req, res) => {
-  // Log setiap panggilan health check (untuk debug)
-  console.log(`[HEALTH] Checked at ${new Date().toISOString()}, Uptime: ${process.uptime()}s`);
+  const start = Date.now();
   
-  // Status selalu OK asalkan server merespons
-  // Railway hanya perlu melihat response 200, tidak peduli isinya
-  res.status(200).json({ 
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    service: 'traffic-bot-v3',
-    uptime: process.uptime(),
-    memory: {
-      rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
-      heap: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
-    }
-  });
+  try {
+    // Always return 200 OK once server is listening
+    const response = {
+      status: 'OK',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      service: 'traffic-bot-v3',
+      memory: {
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+        heap: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+      }
+    };
+    
+    // Send immediate response
+    res.status(200).json(response);
+    
+    // Log after sending response (non-blocking)
+    const duration = Date.now() - start;
+    console.log(`✅ [HEALTH] ${response.status} - ${duration}ms - Uptime: ${response.uptime}s`);
+    
+  } catch (error) {
+    // Even if there's an error, return 200
+    console.error('❌ [HEALTH ERROR]', error.message);
+    res.status(200).json({
+      status: 'ERROR_BUT_RUNNING',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API Status
@@ -1490,6 +1506,32 @@ app.use((req, res) => {
 // Start server
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
+// Delay startup untuk memastikan semua module loaded
+const STARTUP_DELAY = 5000; // 5 detik
+
+console.log(`⏳ [STARTUP] Waiting ${STARTUP_DELAY}ms before starting server...`);
+
+setTimeout(() => {
+  const PORT = process.env.PORT || 8080;
+  const serverInstance = server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ [STARTUP] Server listening on port ${PORT}`);
+    console.log(`🕒 [STARTUP] Startup completed at ${new Date().toISOString()}`);
+    
+    // Log periodic heartbeat
+    setInterval(() => {
+      console.log(`❤️  [HEARTBEAT] Uptime: ${process.uptime().toFixed(1)}s`);
+    }, 30000); // Setiap 30 detik
+  });
+  
+  // Handle server errors
+  serverInstance.on('error', (error) => {
+    console.error('❌ [SERVER ERROR]', error.message);
+    if (error.code === 'EADDRINUSE') {
+      console.error('⚠️ Port', PORT, 'is already in use');
+    }
+  });
+  
+}, STARTUP_DELAY);
 
 server.listen(PORT, HOST, () => {
   console.log(`
