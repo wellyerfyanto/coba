@@ -277,36 +277,31 @@ async function getBrowserLaunchOptions(config, sessionId) {
   }
 
   const launchOptions = {
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-crash-reporter',
-      '--disable-software-rasterizer',
-      '--disable-extensions',
-      '--disable-background-networking',
-      '--disable-sync',
-      '--disable-default-apps',
-      '--disable-translate',
-      '--disable-features=site-per-process,TranslateUI,BlinkGenPropertyTrees',
-      '--enable-features=NetworkService,NetworkServiceInProcess',
-      '--window-size=1920,1080',
-      '--single-process',
-      '--no-zygote',
-      '--no-first-run',
-      '--no-default-browser-check'
-    ],
-    defaultViewport: { 
-      width: 1920, 
-      height: 1080 
-    },
-    executablePath: executablePath,
-    headless: config.headlessMode !== false ? 'new' : false,
-    ignoreHTTPSErrors: true,
-    timeout: 120000,
-    protocolTimeout: 120000
-  };
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',       // PENTING untuk Docker
+    '--disable-accelerated-2d-canvas',
+    '--disable-gpu',                 // Hemat memory GPU
+    '--single-process',              // MODE KRITIS: Hemat memory besar
+    '--no-zygote',
+    '--no-first-run',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-extensions',
+    '--disable-sync',
+    '--disable-translate',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--no-default-browser-check',
+    '--window-size=1280,720'         // Ukuran lebih kecil
+  ],
+  defaultViewport: { width: 1280, height: 720 },
+  executablePath: executablePath,
+  headless: 'new',                   // Gunakan headless baru
+  ignoreHTTPSErrors: true,
+  timeout: 30000                     // Timeout 30 detik
+};
 
   // Tambahkan user data dir jika differentProfiles diaktifkan
   if (config.differentProfiles && config.profileDir) {
