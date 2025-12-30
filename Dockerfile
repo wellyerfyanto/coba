@@ -1,6 +1,6 @@
 FROM node:18-bullseye-slim
 
-# Install Chromium hanya dengan dependencies essential
+# Install Chromium
 RUN apt-get update && apt-get install -y \
     chromium \
     --no-install-recommends && \
@@ -14,16 +14,14 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Hanya salin package.json
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci --omit=dev --no-audit --no-fund
+# Gunakan npm install (bukan npm ci) karena tidak ada lock file
+RUN npm install --omit=dev --no-audit --no-fund
 
-# Copy app code
+# Salin kode aplikasi
 COPY . .
 
 EXPOSE 8080
-
-# Run application
 CMD ["node", "server.js"]
