@@ -1,7 +1,7 @@
 {
   "name": "traffic-bot-v3",
-  "version": "3.1.0",
-  "description": "Advanced Traffic Bot with Auto-Proxy Support",
+  "version": "3.2.0",
+  "description": "Advanced Traffic Bot with Multi-Browser & Multi-Device Support",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -30,6 +30,8 @@
   },
   "keywords": [
     "traffic-bot",
+    "multi-browser",
+    "multi-device",
     "proxy-fetcher",
     "automation",
     "seo",
