@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Bot Dashboard v3.0 - Auto Proxy</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <style>
+        .proxy-status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .badge-success { background: #10b98120; color: #10b981; }
+        .badge-warning { background: #f59e0b20; color: #f59e0b; }
+        .badge-danger { background: #ef444420; color: #ef4444; }
+        .proxy-source-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .proxy-count {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> Traffic Bot Dashboard v3.0</h1>
+            <p>Advanced Traffic Generator with Auto-Proxy Support</p>
+            <div class="status-indicator">
+                <span id="connectionStatus" class="status-offline">
+                    <i class="fas fa-circle"></i> Disconnected
+                </span>
+                <span id="activeSessions">Active Sessions: 0</span>
+                <span id="proxyStatusBadge" class="proxy-status-badge badge-warning">Proxies: 0</span>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <!-- Session Configuration -->
+            <div class="card">
+                <h2><i class="fas fa-cog"></i> Session Configuration</h2>
+                <div class="form-group">
+                    <label>Number of Sessions:</label>
+                    <input type="number" id="sessionCount" min="1" max="20" value="3">
+                    <small>Max 20 sessions for performance</small>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="differentProfiles" checked>
+                        Use Different Profiles (Recommended)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Session Delay (seconds):</label>
+                    <input type="number" id="sessionDelay" min="0" max="60" value="3">
+                    <small>Delay between sessions</small>
+                </div>
+                <div class="form-group">
+                    <label>Concurrent Sessions:</label>
+                    <input type="range" id="concurrentSessions" min="1" max="5" value="3" class="slider">
+                    <div class="range-value">
+                        <span id="concurrentValue">3</span> sessions concurrently
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Configuration -->
+            <div class="card">
+                <h2><i class="fas fa-sign-in-alt"></i> Login Configuration</h2>
+                <div class="form-group">
+                    <label>Login Method:</label>
+                    <select id="loginMethod">
+                        <option value="none">No Login</option>
+                        <option value="google">Google Login</option>
+                        <option value="youtube">YouTube Login</option>
+                    </select>
+                </div>
+                
+                <div id="loginCredentials" class="hidden">
+                    <div class="form-group">
+                        <label>Google Email:</label>
+                        <input type="email" id="googleEmail" placeholder="email@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Google Password:</label>
+                        <div class="password-input">
+                            <input type="password" id="googlePassword" placeholder="••••••••">
+                            <button type="button" id="togglePassword" class="btn-icon">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="saveCredentials">
+                            Save credentials (local storage)
+                        </label>
+                        <small class="warning">⚠️ Never save credentials on shared computers</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy Configuration -->
+            <div class="card">
+                <h2><i class="fas fa-globe"></i> Proxy Configuration</h2>
+                <div class="form-group">
+                    <label>Proxy Source:</label>
+                    <select id="proxySource">
+                        <option value="none">No Proxy</option>
+                        <option value="file">From proxies.txt file</option>
+                        <option value="multi_manual">Multiple Manual Proxies</option>
+                        <option value="manual">Single Manual Proxy</option>
+                        <option value="auto_fetch" selected>Auto Fetch Free Proxies</option>
+                    </select>
+                </div>
+
+                <!-- Auto Fetch Options -->
+                <div id="autoFetchOptions">
+                    <div class="form-group">
+                        <div class="button-group">
+                            <button id="fetchProxiesBtn" class="btn btn-success">
+                                <i class="fas fa-bolt"></i> Fetch & Test Free Proxies
+                            </button>
+                            <button id="refreshProxiesBtn" class="btn btn-secondary">
+                                <i class="fas fa-sync"></i> Refresh Proxy List
+                            </button>
+                            <button id="testSingleProxyBtn" class="btn btn-secondary">
+                                <i class="fas fa-vial"></i> Test Single Proxy
+                            </button>
+                        </div>
+                        <small class="help-text">
+                            Automatically fetches and tests proxies from 10+ free sources.<br>
+                            Working proxies are saved to proxies.txt
+                        </small>
+                    </div>
+                    
+                    <!-- Single Proxy Test -->
+                    <div id="singleProxyTest" class="hidden">
+                        <div class="form-group">
+                            <label>Test Single Proxy:</label>
+                            <div class="input-group">
+                                <input type="text" id="singleProxyInputTest" placeholder="host:port or host:port:user:pass" style="flex: 1;">
+                                <button id="testProxyBtn" class="btn" style="margin-left: 10px;">
+                                    <i class="fas fa-play"></i> Test
+                                </button>
+                            </div>
+                            <div id="proxyTestResult" class="hidden">
+                                <div class="proxy-test-result"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Auto Fetch Progress -->
+                    <div id="fetchProgress" class="hidden">
+                        <div class="progress-container">
+                            <div class="progress-header">
+                                <span>Proxy Testing Progress</span>
+                                <span id="fetchProgressPercent">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="fetchProgressFill"></div>
+                            </div>
+                            <div class="progress-text" id="fetchProgressText">Starting...</div>
+                        </div>
+                        
+                        <div class="stats-container">
+                            <div class="stat-card">
+                                <i class="fas fa-download"></i>
+                                <div class="stat-value" id="fetchedCount">0</div>
+                                <div class="stat-label">Fetched</div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-check-circle"></i>
+                                <div class="stat-value" id="workingCount">0</div>
+                                <div class="stat-label">Working</div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-times-circle"></i>
+                                <div class="stat-value" id="failedCount">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-percentage"></i>
+                                <div class="stat-value" id="successRate">0%</div>
+                                <div class="stat-label">Success Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multiple Manual Proxies -->
+                <div id="multiProxyInput" class="hidden">
+                    <div class="form-group">
+                        <label>Multiple Proxies (one per line):</label>
+                        <textarea id="multiProxies" placeholder="192.168.1.1:8080
+proxy1.com:3128:user1:pass123
+proxy2.com:8080" rows="6"></textarea>
+                        <small class="help-text">
+                            Format per baris: <code>host:port</code> atau <code>host:port:user:pass</code><br>
+                            Contoh:<br>
+                            <code>192.168.1.1:8080</code><br>
+                            <code>proxy1.com:3128:user1:pass123</code><br>
+                            <code>proxy2.com:8080</code>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Single Manual Proxy -->
+                <div id="singleProxyInputManual" class="hidden">
+                    <div class="form-group">
+                        <label>Manual Proxy:</label>
+                        <input type="text" id="manualProxy" placeholder="host:port:user:pass or host:port">
+                    </div>
+                </div>
+
+                <!-- Proxy Options -->
+                <div id="proxyOptions">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="validateProxies" checked>
+                            Validate Proxies Before Use
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="rotateProxies" checked>
+                            Rotate Proxies Between Sessions
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="proxyAuthRequired">
+                            Proxy Requires Authentication
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Proxy Status -->
+                <div id="proxyStatus">
+                    <div class="form-group">
+                        <button id="testProxiesBtn" class="btn btn-secondary">
+                            <i class="fas fa-vial"></i> Test All Proxies
+                        </button>
+                        <button id="loadProxiesBtn" class="btn btn-secondary">
+                            <i class="fas fa-sync"></i> Reload From File
+                        </button>
+                        <button id="viewProxiesBtn" class="btn btn-secondary">
+                            <i class="fas fa-eye"></i> View Proxies
+                        </button>
+                    </div>
+                    <div class="proxy-stats">
+                        <span>Loaded: <strong id="proxyLoadedCount">0</strong></span>
+                        <span>Working: <strong id="proxyWorkingCount">0</strong></span>
+                        <span>Failed: <strong id="proxyFailedCount">0</strong></span>
+                        <span>Success: <strong id="proxySuccessRate">0%</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browser & Security Settings -->
+            <div class="card">
+                <h2><i class="fas fa-shield-alt"></i> Browser & Security</h2>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="rotateUA" checked>
+                        Rotate User Agents
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="checkLeaks" checked>
+                        Check IP Leaks (Security)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="useProxyTimezone" checked>
+                        Use Proxy Timezone
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="headlessMode" checked>
+                        Headless Mode (Faster)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Browser Timeout (seconds):</label>
+                    <input type="number" id="browserTimeout" min="30" max="300" value="120">
+                </div>
+                <div class="form-group">
+                    <label>Proxy Test Timeout (seconds):</label>
+                    <input type="number" id="proxyTestTimeout" min="5" max="30" value="10">
+                </div>
+            </div>
+
+            <!-- Target Selection -->
+            <div class="card">
+                <h2><i class="fas fa-bullseye"></i> Traffic Target</h2>
+                <div class="form-group">
+                    <label>Select Target:</label>
+                    <div class="radio-group vertical">
+                        <label class="target-option">
+                            <input type="radio" name="target" value="youtube" checked>
+                            <i class="fab fa-youtube"></i> YouTube
+                        </label>
+                        <label class="target-option">
+                            <input type="radio" name="target" value="website">
+                            <i class="fas fa-globe"></i> Website
+                        </label>
+                        <label class="target-option disabled">
+                            <input type="radio" name="target" value="facebook" disabled>
+                            <i class="fab fa-facebook"></i> Facebook (Coming Soon)
+                        </label>
+                        <label class="target-option disabled">
+                            <input type="radio" name="target" value="tiktok" disabled>
+                            <i class="fab fa-tiktok"></i> TikTok (Coming Soon)
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Search Engine Selection -->
+                <div class="form-group">
+                    <label>Search Engine:</label>
+                    <div class="radio-group horizontal">
+                        <label>
+                            <input type="radio" name="searchEngine" value="google" checked>
+                            <i class="fab fa-google"></i> Google
+                        </label>
+                        <label>
+                            <input type="radio" name="searchEngine" value="bing">
+                            <i class="fab fa-microsoft"></i> Bing
+                        </label>
+                        <label>
+                            <input type="radio" name="searchEngine" value="duckduckgo">
+                            <i class="fas fa-search"></i> DuckDuckGo
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YouTube Specific Settings -->
+            <div class="card youtube-options">
+                <h2><i class="fab fa-youtube"></i> YouTube Settings</h2>
+                <div class="form-group">
+                    <label>Search Method:</label>
+                    <div class="radio-group vertical">
+                        <label>
+                            <input type="radio" name="ytMethod" value="keyword" checked>
+                            <i class="fas fa-search"></i> Search by Keyword
+                        </label>
+                        <label>
+                            <input type="radio" name="ytMethod" value="direct">
+                            <i class="fas fa-link"></i> Direct URL
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="ytKeywordSection">
+                    <div class="form-group">
+                        <label>Search Keyword/Channel:</label>
+                        <input type="text" id="ytKeyword" placeholder="Enter keyword or channel name">
+                    </div>
+                </div>
+                
+                <div id="ytDirectSection" class="hidden">
+                    <div class="form-group">
+                        <label>YouTube URL:</label>
+                        <input type="text" id="ytDirectUrl" placeholder="https://youtube.com/watch?v=... or https://youtube.com/channel/...">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Watch Duration (minutes):</label>
+                    <input type="range" id="watchDurationRange" min="1" max="60" value="10" class="slider">
+                    <div class="range-value">
+                        <span id="watchDurationValue">10</span> minutes
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>YouTube Actions:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="ytLike" checked>
+                            <i class="fas fa-thumbs-up"></i> Like
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="ytSubscribe">
+                            <i class="fas fa-bell"></i> Subscribe
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="ytComment">
+                            <i class="fas fa-comment"></i> Comment
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="ytShare">
+                            <i class="fas fa-share"></i> Share
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="commentSection" class="hidden">
+                    <div class="form-group">
+                        <label>Comment Text:</label>
+                        <textarea id="commentText" placeholder="Enter comment text (optional)" rows="2"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Interaction Pattern:</label>
+                    <select id="ytPattern">
+                        <option value="normal">Normal Human</option>
+                        <option value="viewer">Casual Viewer</option>
+                        <option value="engaged">Engaged Viewer</option>
+                        <option value="binge">Binge Watcher</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Website Specific Settings -->
+            <div class="card website-options hidden">
+                <h2><i class="fas fa-globe"></i> Website Settings</h2>
+                <div class="form-group">
+                    <label>Target Website URL:</label>
+                    <input type="text" id="webUrl" placeholder="https://example.com or example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Visit Duration (minutes):</label>
+                    <input type="range" id="visitDurationRange" min="1" max="30" value="5" class="slider">
+                    <div class="range-value">
+                        <span id="visitDurationValue">5</span> minutes
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Scroll Pattern:</label>
+                    <select id="scrollPattern">
+                        <option value="reader">Reader Pattern (Slow & Detailed)</option>
+                        <option value="skimmer">Skimmer Pattern (Quick Scan)</option>
+                        <option value="researcher">Researcher Pattern (Thorough)</option>
+                        <option value="bouncer" selected>Bouncer Pattern (Quick Visit)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Navigation Actions:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="clickLinks" checked>
+                            <i class="fas fa-mouse-pointer"></i> Click Internal Links
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="fillForms">
+                            <i class="fas fa-edit"></i> Fill Forms (Simple)
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="takeScreenshots">
+                            <i class="fas fa-camera"></i> Take Screenshots
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Keywords to Search (Optional):</label>
+                    <input type="text" id="webKeyword" placeholder="Enter keywords to search on site">
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="card control-panel">
+                <h2><i class="fas fa-gamepad"></i> Control Panel</h2>
+                
+                <div class="button-group">
+                    <button id="startBtn" class="btn btn-success">
+                        <i class="fas fa-play"></i> Start Bot Sessions
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger" disabled>
+                        <i class="fas fa-stop"></i> Stop All Sessions
+                    </button>
+                    <button id="pauseBtn" class="btn btn-warning" disabled>
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                </div>
+                
+                <div class="button-group">
+                    <button id="clearCacheBtn" class="btn btn-secondary">
+                        <i class="fas fa-trash-alt"></i> Clear Cache
+                    </button>
+                    <button id="exportConfigBtn" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Export Config
+                    </button>
+                    <button id="importConfigBtn" class="btn btn-secondary">
+                        <i class="fas fa-upload"></i> Import Config
+                    </button>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    <div class="button-group-small">
+                        <button class="btn quick-btn" data-config='{"target":"website","webUrl":"https://cryptoajah.blogspot.com","sessionCount":3,"proxySource":"auto_fetch","rotateUA":true,"differentProfiles":true}'>
+                            <i class="fas fa-robot"></i> Auto-Proxy Traffic
+                        </button>
+                        <button class="btn quick-btn" data-config='{"target":"website","webUrl":"https://www.wikipedia.org","sessionCount":2,"scrollPattern":"reader"}'>
+                            <i class="fab fa-wikipedia-w"></i> Wikipedia Test
+                        </button>
+                        <button class="btn quick-btn" data-config='{"target":"youtube","ytKeyword":"music","sessionCount":2,"proxySource":"auto_fetch"}'>
+                            <i class="fab fa-youtube"></i> YouTube Music
+                        </button>
+                        <button class="btn quick-btn" data-config='{"target":"website","webUrl":"https://example.com","sessionCount":1,"proxySource":"none"}'>
+                            <i class="fas fa-globe"></i> No Proxy Test
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Session Progress -->
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <span>Overall Progress</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Ready to start...</div>
+                    
+                    <!-- Individual Session Progress -->
+                    <div id="sessionProgressContainer" class="hidden">
+                        <h4>Individual Sessions</h4>
+                        <div id="sessionProgressList"></div>
+                    </div>
+                </div>
+                
+                <!-- Logs Display -->
+                <div class="form-group">
+                    <div class="logs-header">
+                        <label>Session Logs</label>
+                        <div class="log-controls">
+                            <button id="clearLogsBtn" class="btn-icon">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button id="copyLogsBtn" class="btn-icon">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button id="pauseLogsBtn" class="btn-icon">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button id="exportLogsBtn" class="btn-icon">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="log-container" id="logOutput">
+                        <div class="log-entry info">
+                            <span class="log-time">[00:00:00]</span>
+                            <span class="log-message">Traffic Bot Dashboard v3.0 initialized</span>
+                        </div>
+                        <div class="log-entry info">
+                            <span class="log-time">[00:00:00]</span>
+                            <span class="log-message">Auto-Proxy feature enabled</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Display -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <i class="fas fa-play-circle"></i>
+                        <div class="stat-value" id="totalSessions">0</div>
+                        <div class="stat-label">Total Sessions</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-check-circle"></i>
+                        <div class="stat-value" id="completedSessions">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-times-circle"></i>
+                        <div class="stat-value" id="failedSessions">0</div>
+                        <div class="stat-label">Failed</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div class="stat-value" id="avgDuration">0s</div>
+                        <div class="stat-label">Avg Duration</div>
+                    </div>
+                </div>
+                
+                <!-- Proxy Quick Stats -->
+                <div class="quick-stats">
+                    <h4><i class="fas fa-sync-alt"></i> Proxy Status</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label-small">Available:</span>
+                            <span class="stat-value-small" id="availableProxies">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label-small">Last Updated:</span>
+                            <span class="stat-value-small" id="lastProxyUpdate">Never</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label-small">Success Rate:</span>
+                            <span class="stat-value-small" id="proxySuccessRateSmall">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <button id="quickFetchBtn" class="btn-small">
+                                <i class="fas fa-redo"></i> Quick Fetch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-info-circle"></i> About</h4>
+                    <p>Traffic Bot v3.0 - Advanced traffic generation with auto-proxy support.</p>
+                    <p class="version">Version: 3.1.0 (Auto-Proxy Edition)</p>
+                </div>
+                <div class="footer-section">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Disclaimer</h4>
+                    <p>Use responsibly and in accordance with target website terms of service.</p>
+                    <p>Auto-proxy feature fetches from public sources. Use at your own risk.</p>
+                </div>
+                <div class="footer-section">
+                    <h4><i class="fas fa-server"></i> System Status</h4>
+                    <p id="serverStatus">Checking...</p>
+                    <p id="proxyStatusText">Proxies: Loading...</p>
+                    <p id="uptimeStatus">Uptime: --</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Traffic Bot Dashboard | Version 3.1.0 - Auto-Proxy Edition</p>
+                <p class="small">Proxy Sources: 10+ public repositories | Auto-testing enabled</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal for Viewing Proxies -->
+    <div id="proxyViewModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Available Proxies</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="proxy-list-controls">
+                    <input type="text" id="proxySearch" placeholder="Search proxies..." class="search-input">
+                    <button id="copyProxiesBtn" class="btn-small">
+                        <i class="fas fa-copy"></i> Copy All
+                    </button>
+                </div>
+                <div class="proxy-list-container">
+                    <div id="proxyListContent">
+                        <p>Loading proxies...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <small>Total: <span id="proxyListCount">0</span> proxies | Last updated: <span id="proxyListUpdated">Never</span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Toastr for notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    
+    <!-- Import Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Main Script -->
+    <script src="script.js"></script>
+</body>
+</html>
