@@ -14,6 +14,9 @@
   },
   "variables": {
     "NODE_ENV": "production",
-    "RAILWAY_ENVIRONMENT": "true"
+    "RAILWAY_ENVIRONMENT": "true",
+    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+    "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium",
+    "CHROMIUM_PATH": "/usr/bin/chromium"
   }
 }
