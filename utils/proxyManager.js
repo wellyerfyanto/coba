@@ -85,7 +85,7 @@ class ProxyManager {
   }
 
   // Test semua proxy
-  async validateAllProxies(timeout = 10000) {
+  async validateAllProxies(timeout = 20000) {
     console.log(`🔄 Testing ${this.proxies.length} proxies...`);
     
     const testPromises = this.proxies.map(async (proxy, index) => {
@@ -170,7 +170,7 @@ class ProxyManager {
   // Test single proxy
   async testProxy(proxy) {
     const testUrl = 'http://httpbin.org/ip';
-    const timeout = 10000;
+    const timeout = 20000;
     
     try {
       const config = {
