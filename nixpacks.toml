@@ -1,5 +1,0 @@
-[phases.setup]
-aptPackages = ["chromium"]
-
-[start]
-cmd = "node server.js"
