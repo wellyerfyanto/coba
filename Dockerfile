@@ -1,54 +1,82 @@
-# Gunakan base image yang lebih ringan
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 
-# Install chromium dependencies di Alpine
-RUN apk update && apk add --no-cache \
+# 1. INSTALL SYSTEM DEPENDENCIES (Termasuk Chromium untuk Puppeteer)
+RUN apt-get update && apt-get install -y \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
     ca-certificates \
-    ttf-freefont \
-    nodejs \
-    yarn \
-    python3 \
-    make \
-    g++
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
+    wget \
+    xdg-utils \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set environment variables
+# 2. SET ENVIRONMENT VARIABLES FOR PUPPETEER
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
-    PORT=8080 \
-    CHROMIUM_PATH=/usr/bin/chromium-browser
+    PORT=8080
 
-# Optional: Add user for security
-RUN addgroup -S pptruser && adduser -S -G pptruser pptruser
+# 3. FIX PERMISSIONS AND CREATE NECESSARY DIRS
+RUN mkdir -p /tmp/chrome-user-data && chmod 777 /tmp/chrome-user-data
 
 WORKDIR /app
 
-# Copy package files
+# 4. COPY PACKAGE FILES
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production --no-audit --no-fund
+# 5. INSTALL DEPENDENCIES (FIXED COMMAND)
+# Gunakan 'npm install' jika 'package-lock.json' tidak ada/tidak valid
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --no-audit --no-fund; \
+    else \
+      npm install --omit=dev --no-audit --no-fund; \
+      npm cache clean --force; \
+    fi
 
-# Copy app
+# 6. COPY APPLICATION CODE
 COPY . .
 
-# Fix permissions
-RUN mkdir -p /tmp/chrome-user-data && \
-    chown -R pptruser:pptruser /tmp/chrome-user-data && \
-    chown -R pptruser:pptruser /app
+# 7. CREATE NON-ROOT USER (Security best practice)
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
-# Switch to non-root user
-USER pptruser
-
+# 8. EXPOSE PORT
 EXPOSE 8080
 
-# Health check dengan timeout lebih panjang
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
+# 9. HEALTH CHECK
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Start dengan graceful shutdown handler
-CMD ["npm", "start"]
+# 10. START THE APPLICATION
+CMD ["node", "server.js"]
