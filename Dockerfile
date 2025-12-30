@@ -29,16 +29,17 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Environment variables
+# Environment variables - PENTING untuk skip download
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    CHROMIUM_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Copy package files DAN postinstall.js terlebih dahulu
-COPY package*.json postinstall.js ./
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install --omit=dev --no-audit --no-fund
