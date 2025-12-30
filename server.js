@@ -8,6 +8,39 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ [UNHANDLED REJECTION] FATAL:', reason);
   process.exit(1);
 });
+// ======================== STARTUP DEBUGGING ========================
+console.log('🚀 [DEBUG] Node.js process starting...');
+console.log(`[DEBUG] Node ${process.version}, Platform: ${process.platform}`);
+console.log(`[DEBUG] ENV: NODE_ENV=${process.env.NODE_ENV}, PORT=${process.env.PORT}`);
+console.log(`[DEBUG] CWD: ${process.cwd()}`);
+console.log(`[DEBUG] PID: ${process.pid}`);
+
+// Tangkap SEMUA sinyal dan log
+const signals = ['SIGTERM', 'SIGINT', 'SIGHUP', 'SIGABRT', 'SIGQUIT', 'SIGUSR1', 'SIGUSR2'];
+signals.forEach(signal => {
+  process.on(signal, () => {
+    console.error(`⚡ [DEBUG] Received signal: ${signal} at ${new Date().toISOString()}`);
+    console.error(`[DEBUG] Uptime before exit: ${process.uptime()}s`);
+    // Force flush logs
+    if (process.stdout) process.stdout.write('');
+    if (process.stderr) process.stderr.write('');
+    // Exit dengan kode yang berbeda untuk identifikasi
+    const exitCode = signal === 'SIGTERM' ? 143 : 130;
+    setTimeout(() => process.exit(exitCode), 100);
+  });
+});
+
+// Tangkap exit terakhir
+process.on('exit', (code) => {
+  console.error(`🔚 [DEBUG] Process exiting with code: ${code}`);
+});
+
+// Tangkap Warning
+process.on('warning', (warning) => {
+  console.warn(`⚠️ [DEBUG] Node Warning: ${warning.name}: ${warning.message}`);
+  console.warn(`[DEBUG] Stack: ${warning.stack}`);
+});
+// ======================== END DEBUGGING ========================
 require('dotenv').config();
 const express = require('express');
 const socketIO = require('socket.io');
