@@ -531,106 +531,218 @@ async function runBotSession(config, sessionIndex, mainSessionId, socketId = nul
     }
     
     // Setup proxy authentication jika diperlukan
-    if (sessionConfig.proxyAuth && sessionConfig.proxyAuth.username) {
-      await page.authenticate({
-        username: sessionConfig.proxyAuth.username,
-        password: sessionConfig.proxyAuth.password || ''
-      });
-    }
-
-    // Set timeout untuk navigation
-    page.setDefaultNavigationTimeout(30000);
-    page.setDefaultTimeout(30000);
-
-    // 7. LOGIN JIKA DIKONFIGURASI
-    if (config.loginMethod && config.loginMethod !== 'none' && 
-        config.googleEmail && config.googlePassword) {
-      
-      emitStatus(socketId, {
-        sessionId,
-        status: 'login_start',
-        message: 'Memulai proses login...',
-        progress: 25
-      });
-      
-      let loginSuccess = false;
-      
-      if (config.loginMethod === 'google') {
-        loginSuccess = await loginToGoogle(page, config, sessionId, socketId);
-      } else if (config.loginMethod === 'youtube') {
-        loginSuccess = await loginToYouTube(page, config, sessionId, socketId);
-      }
-      
-      if (loginSuccess) {
-        emitStatus(socketId, {
-          sessionId,
-          status: 'login_complete',
-          message: 'Login berhasil, melanjutkan...',
-          progress: 30
-        });
-        await page.waitForTimeout(2000);
-      } else {
-        emitStatus(socketId, {
-          sessionId,
-          status: 'warning',
-          message: 'Login gagal, melanjutkan tanpa login'
-        });
-      }
-    }
-
-    // 8. EKSEKUSI BERDASARKAN TARGET
-    let result;
-    if (config.target === 'youtube') {
-      result = await handleYouTubeTraffic(page, sessionConfig, sessionId, socketId);
-    } else if (config.target === 'website') {
-      result = await handleWebsiteTraffic(page, sessionConfig, sessionId, socketId);
-    } else {
-      throw new Error(`Target tidak didukung: ${config.target}`);
-    }
-
-    // 9. CLEANUP
-    await page.close().catch(e => console.error(`[${sessionId}] Error closing page:`, e));
+// Fungsi utama untuk menjalankan sesi bot dengan login support
+async function runBotSession(config, sessionIndex, mainSessionId, socketId = null) {
+    const sessionId = `${mainSessionId}-${sessionIndex}`;
+    const sessionConfig = { ...config };
+    let browser = null;
     
-    emitStatus(socketId, {
-      sessionId,
-      status: 'completed',
-      message: 'Sesi bot berhasil diselesaikan',
-      progress: 100
+    console.log(`\n=== [${sessionId}] STARTING BOT SESSION ${sessionIndex + 1}/${config.sessionCount} ===`);
+    console.log(`[${sessionId}] Config:`, {
+        target: config.target,
+        webUrl: config.webUrl,
+        visitDuration: config.visitDuration,
+        scrollPattern: config.scrollPattern,
+        proxySource: config.proxySource,
+        socketId: socketId ? socketId.substring(0, 8) + '...' : 'none'
     });
-
-    console.log(`[${sessionId}] Bot session completed successfully`);
-    return { success: true, sessionId, ...result };
-
-  } catch (error) {
-    console.error(`[${sessionId}] Error in bot session:`, error);
     
-    emitStatus(socketId, {
-      sessionId,
-      status: 'error',
-      message: `Error: ${error.message}`
-    });
+    try {
+        // 1. Setup Profile Directory jika diperlukan
+        if (config.differentProfiles) {
+            sessionConfig.profileDir = await createProfileDirectory(mainSessionId, sessionIndex);
+            console.log(`[${sessionId}] Created profile directory: ${sessionConfig.profileDir}`);
+        }
 
-    throw error;
-  } finally {
-    // PASTIKAN BROWSER SELALU DITUTUP
-    if (browser) {
-      try {
-        await browser.close();
-        console.log(`[${sessionId}] Browser closed`);
-      } catch (error) {
-        console.error(`[${sessionId}] Error closing browser:`, error);
-      }
+        // 2. Setup User Agent Rotation
+        const uaRotator = new UserAgentRotator();
+        if (config.rotateUA) {
+            sessionConfig.userAgent = uaRotator.getUserAgentForSession(sessionIndex);
+            console.log(`[${sessionId}] Using User Agent: ${sessionConfig.userAgent.substring(0, 50)}...`);
+        }
+
+        // 3. Setup Proxy dengan support multiple
+        const proxyConfig = await setupProxy(config, sessionId, socketId, sessionIndex);
+        if (proxyConfig.proxyServer) {
+            sessionConfig.proxyServer = proxyConfig.proxyServer;
+            sessionConfig.proxyAuth = proxyConfig.proxyAuth;
+            console.log(`[${sessionId}] Using proxy: ${proxyConfig.proxyServer}`);
+        }
+
+        // 4. Security Check
+        await performSecurityCheck(config, sessionId, socketId, proxyConfig);
+
+        // 5. Get Browser Launch Options
+        const launchOptions = await getBrowserLaunchOptions(sessionConfig, sessionId);
+        
+        // Tambahkan proxy jika ada
+        if (sessionConfig.proxyServer) {
+            launchOptions.args.push(`--proxy-server=${sessionConfig.proxyServer}`);
+            console.log(`[${sessionId}] Added proxy to browser args`);
+        }
+
+        // 6. LAUNCH BROWSER
+        emitStatus(socketId, {
+            sessionId,
+            status: 'launching_browser',
+            message: 'Launching browser...',
+            progress: 10
+        });
+
+        console.log(`[${sessionId}] Launching browser with ${launchOptions.headless ? 'headless' : 'headed'} mode...`);
+        
+        try {
+            browser = await puppeteer.launch(launchOptions);
+            console.log(`[${sessionId}] Browser launched successfully`);
+        } catch (launchError) {
+            console.error(`[${sessionId}] Failed to launch with primary method:`, launchError.message);
+            
+            emitStatus(socketId, {
+                sessionId,
+                status: 'warning',
+                message: 'Trying fallback browser launch...'
+            });
+            
+            const fallbackOptions = {
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                executablePath: '/usr/bin/chromium',
+                headless: 'new',
+                timeout: 60000
+            };
+            
+            browser = await puppeteer.launch(fallbackOptions);
+            console.log(`[${sessionId}] Browser launched with fallback method`);
+        }
+        
+        emitStatus(socketId, {
+            sessionId,
+            status: 'browser_launched',
+            message: 'Browser launched successfully',
+            progress: 20
+        });
+
+        const page = await browser.newPage();
+        console.log(`[${sessionId}] New page created`);
+        
+        // Set user agent jika ada
+        if (sessionConfig.userAgent) {
+            await page.setUserAgent(sessionConfig.userAgent);
+            console.log(`[${sessionId}] User agent set`);
+        }
+        
+        // Setup proxy authentication jika diperlukan
+        if (sessionConfig.proxyAuth && sessionConfig.proxyAuth.username) {
+            await page.authenticate({
+                username: sessionConfig.proxyAuth.username,
+                password: sessionConfig.proxyAuth.password || ''
+            });
+            console.log(`[${sessionId}] Proxy authentication set`);
+        }
+
+        // Set timeout untuk navigation
+        page.setDefaultNavigationTimeout(30000);
+        page.setDefaultTimeout(30000);
+
+        // 7. LOGIN JIKA DIKONFIGURASI
+        if (config.loginMethod && config.loginMethod !== 'none' && 
+            config.googleEmail && config.googlePassword) {
+            
+            emitStatus(socketId, {
+                sessionId,
+                status: 'login_start',
+                message: 'Memulai proses login...',
+                progress: 25
+            });
+            
+            console.log(`[${sessionId}] Attempting login with method: ${config.loginMethod}`);
+            
+            let loginSuccess = false;
+            
+            if (config.loginMethod === 'google') {
+                loginSuccess = await loginToGoogle(page, config, sessionId, socketId);
+            } else if (config.loginMethod === 'youtube') {
+                loginSuccess = await loginToYouTube(page, config, sessionId, socketId);
+            }
+            
+            if (loginSuccess) {
+                emitStatus(socketId, {
+                    sessionId,
+                    status: 'login_complete',
+                    message: 'Login berhasil, melanjutkan...',
+                    progress: 30
+                });
+                await page.waitForTimeout(2000);
+            } else {
+                emitStatus(socketId, {
+                    sessionId,
+                    status: 'warning',
+                    message: 'Login gagal, melanjutkan tanpa login'
+                });
+            }
+        } else {
+            console.log(`[${sessionId}] No login required, proceeding directly...`);
+        }
+
+        // 8. EKSEKUSI BERDASARKAN TARGET
+        let result;
+        if (config.target === 'youtube') {
+            console.log(`[${sessionId}] Executing YouTube traffic...`);
+            result = await handleYouTubeTraffic(page, sessionConfig, sessionId, socketId);
+        } else if (config.target === 'website') {
+            console.log(`[${sessionId}] Executing Website traffic...`);
+            result = await handleWebsiteTraffic(page, sessionConfig, sessionId, socketId);
+        } else {
+            throw new Error(`Target tidak didukung: ${config.target}`);
+        }
+
+        // 9. CLEANUP
+        console.log(`[${sessionId}] Cleaning up...`);
+        await page.close().catch(e => console.error(`[${sessionId}] Error closing page:`, e));
+        
+        emitStatus(socketId, {
+            sessionId,
+            status: 'completed',
+            message: 'Sesi bot berhasil diselesaikan',
+            progress: 100
+        });
+
+        console.log(`[${sessionId}] Bot session completed successfully`);
+        return { success: true, sessionId, ...result };
+
+    } catch (error) {
+        console.error(`[${sessionId}] Error in bot session:`, error);
+        console.error(`[${sessionId}] Error stack:`, error.stack);
+        
+        emitStatus(socketId, {
+            sessionId,
+            status: 'error',
+            message: `Error: ${error.message}`
+        });
+
+        throw error;
+    } finally {
+        // PASTIKAN BROWSER SELALU DITUTUP
+        if (browser) {
+            try {
+                await browser.close();
+                console.log(`[${sessionId}] Browser closed`);
+            } catch (error) {
+                console.error(`[${sessionId}] Error closing browser:`, error);
+            }
+        }
+        
+        // Cleanup profile directory jika ada
+        if (sessionConfig.profileDir) {
+            try {
+                await fs.rm(sessionConfig.profileDir, { recursive: true, force: true });
+                console.log(`[${sessionId}] Profile directory cleaned`);
+            } catch (e) {
+                console.log(`[${sessionId}] Error cleaning profile directory:`, e.message);
+            }
+        }
+        
+        console.log(`=== [${sessionId}] BOT SESSION ENDED ===\n`);
     }
-    
-    // Cleanup profile directory jika ada
-    if (sessionConfig.profileDir) {
-      try {
-        await fs.rm(sessionConfig.profileDir, { recursive: true, force: true });
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    }
-  }
 }
 
 // Fungsi untuk traffic YouTube
