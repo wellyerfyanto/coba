@@ -1,87 +1,54 @@
-FROM node:18-bullseye-slim
+# Gunakan base image yang lebih ringan
+FROM node:18-alpine
 
-# 1. INSTALL SYSTEM DEPENDENCIES FOR CHROMIUM
-RUN apt-get update && apt-get install -y \
+# Install chromium dependencies di Alpine
+RUN apk update && apk add --no-cache \
     chromium \
+    nss \
+    freetype \
+    harfbuzz \
     ca-certificates \
-    fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libgdk-pixbuf2.0-0 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    lsb-release \
-    wget \
-    xdg-utils \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+    ttf-freefont \
+    nodejs \
+    yarn \
+    python3 \
+    make \
+    g++
 
-# 2. SET ENVIRONMENT VARIABLES FOR PUPPETEER
+# Set environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    CHROMIUM_PATH=/usr/bin/chromium-browser
 
-# 3. FIX FOR CRASHPAD ERROR: Set writable directories for Chrome
-ENV XDG_RUNTIME_DIR=/tmp/.chromium \
-    XDG_CONFIG_HOME=/tmp/.chromium \
-    HOME=/tmp/.chromium
+# Optional: Add user for security
+RUN addgroup -S pptruser && adduser -S -G pptruser pptruser
 
 WORKDIR /app
 
-# 4. COPY PACKAGE FILES AND INSTALL DEPENDENCIES
+# Copy package files
 COPY package*.json ./
-RUN npm install --only=production --no-audit
 
-# 5. COPY APPLICATION CODE
+# Install dependencies
+RUN npm ci --only=production --no-audit --no-fund
+
+# Copy app
 COPY . .
 
-# 6. CREATE DIRECTORIES FOR CHROME WITH PROPER PERMISSIONS
-# This is CRITICAL for fixing the crashpad error
-RUN mkdir -p /tmp/chrome-user-data /tmp/.chromium && \
-    chmod -R 777 /tmp && \
-    chown -R node:node /tmp
+# Fix permissions
+RUN mkdir -p /tmp/chrome-user-data && \
+    chown -R pptruser:pptruser /tmp/chrome-user-data && \
+    chown -R pptruser:pptruser /app
 
-# 7. CREATE NON-ROOT USER FOR SECURITY
-RUN groupadd -r botuser && useradd -r -g botuser -G audio,video botuser && \
-    chown -R botuser:botuser /app /tmp/chrome-user-data /tmp/.chromium
+# Switch to non-root user
+USER pptruser
 
-USER botuser
-
-# 8. EXPOSE PORT
 EXPOSE 8080
 
-# 9. HEALTH CHECK (optional but recommended)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check dengan timeout lebih panjang
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# 10. START THE APPLICATION
+# Start dengan graceful shutdown handler
 CMD ["npm", "start"]
