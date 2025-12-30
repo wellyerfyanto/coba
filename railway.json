@@ -2,27 +2,13 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile",
-    "nixpacksPlan": {
-      "phases": {
-        "setup": {
-          "aptPackages": ["chromium", "ca-certificates", "fonts-liberation"]
-        }
-      }
-    }
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "npm start",
+    "startCommand": "node server.js",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 60,
+    "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 5,
-    "replicas": 1
-  },
-  "variables": {
-    "NODE_ENV": "production",
-    "RAILWAY_ENVIRONMENT": "true",
-    "PORT": "8080",
-    "MEMORY_LIMIT": "1024"
+    "restartPolicyMaxRetries": 5
   }
 }
