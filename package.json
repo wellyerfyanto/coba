@@ -5,10 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "postinstall": "node postinstall.js",
-    "build": "npm install --production",
-    "prepare": "npm run build"
+    "dev": "nodemon server.js"
   },
   "keywords": [
     "traffic-bot",
@@ -30,7 +27,7 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "https-proxy-agent": "^7.0.2",
-    "puppeteer": "^24.1.1",
+    "puppeteer": "^21.3.8",
     "socket.io": "^4.7.2",
     "socks-proxy-agent": "^8.0.3",
     "uuid": "^9.0.1"
