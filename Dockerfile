@@ -1,6 +1,6 @@
 FROM node:18-bullseye
 
-# Install dependencies untuk Chromium, Firefox, dan WebKit
+# Install dependencies untuk Chromium dan Firefox
 RUN apt-get update && apt-get install -y \
     chromium \
     firefox-esr \
