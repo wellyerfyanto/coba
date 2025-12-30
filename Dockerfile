@@ -1,12 +1,12 @@
 FROM node:18-bullseye-slim
 
-# Install hanya dependensi ESSENTIAL untuk Chromium di Debian
+# Install Chromium hanya dengan dependencies essential
 RUN apt-get update && apt-get install -y \
     chromium \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Set environment untuk Puppeteer gunakan Chromium sistem
+# Environment untuk Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
@@ -14,15 +14,16 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /app
 
-# 1. Salin package.json saja dulu
-COPY package.json ./
+# Copy package files
+COPY package.json package-lock.json ./
 
-# 2. Install dependencies (gunakan --omit=dev)
-RUN npm install --omit=dev --no-audit --no-fund
+# Install dependencies
+RUN npm ci --omit=dev --no-audit --no-fund
 
-# 3. Salin semua kode aplikasi
+# Copy app code
 COPY . .
 
 EXPOSE 8080
 
+# Run application
 CMD ["node", "server.js"]
