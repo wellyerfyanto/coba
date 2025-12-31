@@ -26,7 +26,7 @@ RUN addgroup -S pptruser && adduser -S -G pptruser pptruser
 WORKDIR /app
 
 # Copy package files first (better layer caching)
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Install dependencies
 RUN npm ci --only=production --no-optional
