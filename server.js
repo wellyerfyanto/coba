@@ -1392,7 +1392,7 @@ async function handleWebsiteTraffic(page, config, sessionId, socketId) {
     console.log(`[${sessionId}] Navigating to ${targetUrl}`);
     await page.goto(targetUrl, { 
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 60000
     });
 
     // Cek apakah halaman berhasil dimuat
@@ -1407,7 +1407,7 @@ async function handleWebsiteTraffic(page, config, sessionId, socketId) {
     });
 
     // Tunggu 2 detik untuk stabilisasi
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(10000);
 
     // TENTUKAN POLA SCROLL BERDASARKAN KONFIG
     let scrollConfig = {
